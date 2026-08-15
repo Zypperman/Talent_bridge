@@ -1,321 +1,105 @@
 # Talent Bridge — Slide Content Plan
 
-Content outline derived from `Product Requirement Document_draft.md`, restructured
-slide-by-slide. This is the planning doc; the presentable Marp deck built from it
-lives at `slides/slides.md` (run `npm run preview` inside `slides/` to view it).
+Content outline for the presentable Marp deck at `slides/slides.md` (run
+`npm run preview` inside `slides/` to view it; `npx marp slides.md -o slides.html`
+to rebuild the static export).
 
-## Each `## Slide N` entry becomes one slide. Lines under `Notes:` are speaker notes,
-not on-slide content. Each of the three solutions gets an intro slide in a fixed
-three-part format — **problem it addresses → how it solves that problem → what's
-different from existing solutions** — followed by whatever mechanics/detail slides
-are needed.
+Compressed to a 3-slide pitch (plus an unnumbered title and an appendix of
+Q&A backup slides, which don't count toward the 3).
 
 ---
 
-## Slide 1 — Title
+## Slide 0 — Title *(unpaginated)*
 
 **Talent Bridge**
 Proving understanding, not attendance.
 
 Notes: Batam data-center hiring, hackathon pitch context.
 
-## Slide 2 — Hook
-
-"Batam's data-center boom is creating real technical jobs — but most of Batam's
-current tech workforce is in operational roles, not the specialized engineering
-roles this boom needs. The question is: how do you close that gap fast, and how
-does an employer actually trust that someone is ready?"
-
-## Slide 3 — The Problem
-
-- Batam open unemployment: **7.68%** in 2024 — 50,431 people
-- Most are SMA/SMK graduates; only **13.74%** of Batam's workforce holds tertiary
-  qualifications
-- Data centers are capital-intensive, not labour-intensive: a 50MW facility employs
-  1,500–2,000 during construction but only **50–150** once operational — vs.
-  8,000–12,000 direct jobs for equivalent manufacturing investment
-- Rp120 trillion of digital investment → a permanent headcount too small and too
-  specialised to touch the people who are actually unemployed
-
-## Slide 4 — Who Hurts
-
-- **Batam's unemployed/underemployed workforce** — need a fast path into
-  data-center-adjacent technical roles, but lack access to specialized,
-  job-relevant training
-- **Employers in Batam and Singapore** — can't tell from a resume or a completion
-  certificate whether a candidate actually understands the material
-
-## Slide 5 — Current Workaround Fails
-
-- Workers self-teach via YouTube, Udemy, Coursera, Pluralsight — genuinely good
-  expert content
-- They walk away with a multiple-choice quiz result and a **"Certificate of
-  Completion"**
-- **That certificate proves the video was watched — not that the material was
-  understood.**
-- Employers fall back on resume claims, interviews, or platform prestige — none of
-  which measure competency directly
-
-## Slide 6 — Why Now
-
-Capital is arriving faster than the workforce can be made legible to it. Closing
-the gap means building exactly the skills these roles need and proving them
-credibly — not waiting a generation for tertiary attainment to catch up.
-
-## Slide 7 — The Solution
-
-**Learning through real conversation, not content consumption.**
-
-1. Micro-credentials — competency, scored and evidenced, not a certificate
-2. Socratic, section-gated course creation — can't skip ahead, can't fake it
-3. (Exploratory) sandbox incident simulation for hands-on practice
-
-## Slide 8 — Goals
-
-1. Fill knowledge gaps and validate competency by demonstrated understanding —
-   not the prestige of the issuing platform
-2. Design courses tightly scoped to real job requirements, "down to the T"
-3. Give recruiters an objective, evidence-backed way to assess a specific skill —
-   not just whether a credential exists
-
-## Slide 9 — Non-Goals
-
-- Not a general-content MOOC platform competing on catalog breadth
-- Not a black-box AI ranking/relevance system for employers
-- Not a fully autonomous AI content pipeline — human expert reviews every course
-- Not (for MVP) horizontally-scaled infra, or a fully-realized sandbox
-- Not scoped narrowly to Batam — the mechanism must generalize
-
-## Slide 10 — Solution 1: Micro-Credentials
-
-**The problem:** A completion certificate proves a video was watched — not that
-the material was understood. Employers can't tell which "skills" on a profile are
-real.
-
-**How this solves it:** Every concept becomes a Micro-Credential: an AI-assigned
-depth score (0–10) backed by an evidence log of quoted excerpts from the learner's
-own conversation — not a pass/fail checkbox.
-
-**What's different:** Coursera-style platforms are top-down — they tell you a
-course covered a skill. Talent Bridge is bottom-up — it reports *how well*, and
-every score traces back to evidence anyone can check. No black box.
-
-## Slide 11 — Inside a Micro-Credential
-
-- The atomic, scored unit of a course: one concept/skill
-- Contains: depth score (0–10), exercise/scenario history, competency summary
-- The score updates as new exercises complete — see Competency Decay (Slide 13)
-
-## Slide 12 — Depth Score
-
-AI-assigned, 0–10, derived from three dimensions of a section conversation:
-
-- **Speed** to real understanding
-- **Quality** of the learner's own explanation
-- **Sharpness** of the learner's follow-up questions
-
-Every score carries an evidence log — quoted excerpts from the actual
-conversation, not an opaque number.
-
-*(Open question: the exact formula combining the three dimensions is not yet
-defined — see Slide 23.)*
-
-## Slide 13 — Competency Decay
-
-- **−0.5 every 3 months** while unemployed, off a 0–10 scale, floors at 0
-- Refreshes upward on newer completed exercises
-- **Frozen** while employed in a role that uses the skill — no decay
-- Models real skill atrophy so an old credential doesn't read as current
-
-**Example:** MC at 8.0 → unemployed 3 months → 7.5 → 6 months → 7.0. A new
-exercise scoring 9.0 at month 4 refreshes the stored score upward instead of
-continuing to decay.
-
-## Slide 14 — Solution 2: Course Creation & Section Gating
-
-**The problem:** Generic curricula don't map to what a specific job actually
-needs, and click-through completion (watch → quiz → certificate) doesn't test
-whether the learner understood anything.
-
-**How this solves it:** AI designs each course directly from a real job
-description. Content is split into sequential, gated sections — a learner can't
-advance without a real conversation with the AI instructor, explaining the
-concept back and proving genuine understanding.
-
-**What's different:** Scoped "down to the T" to one job, not a fixed catalog
-course. Progression is gated by demonstrated understanding, not a quiz, and every
-AI-drafted course is validated by a human domain expert before it reaches a
-learner.
-
-## Slide 15 — How a Course Gets Built
-
-- Course is anchored to a real job description (MVP: a hand-picked sample;
-  future: live LinkedIn scrape)
-- Sections numbered sequentially (1.1, 1.2, 1.3, …) — each unlocks only after
-  the previous is complete
-- Credential issues only once **every** section is genuinely completed
-
-## Slide 16 — Section Gating, Worked Example
-
-A learner finishes reading 1.1 ("What is a storage array?"). To unlock 1.2 they
-must:
-
-- Explain in their own words what a storage array is and why redundancy matters
-- Answer a follow-up probing question
-
-If they can only repeat memorized phrases without engaging the follow-up, the
-section stays locked and the AI flags the specific gap for another attempt.
-
-## Slide 17 — Solution 3: Sandbox Incident Simulation *(exploratory)*
-
-**The problem:** Conceptual understanding alone doesn't prove someone can
-troubleshoot a real incident under real conditions — and technical interviews or
-tests like HackerRank only measure isolated problem-solving under exam pressure,
-in one sitting.
-
-**How this solves it:** Learners get a cloud workspace mocking a real
-data-center incident (storage array failure, latency spike) and must
-troubleshoot it back to working order, verified by an automated test suite.
-
-**What's different:** Measures applied skill on real infrastructure patterns
-tied to the job, not a timed abstract puzzle — though this piece is still
-exploratory (see Slide 23).
-
-## Slide 18 — Inside the Sandbox
-
-- Cloud workspace via K8s, incident triggered via Terraform configuration
-- Learner troubleshoots to restore functionality, then runs a test suite to
-  confirm
-- **The hard part:** most storage/network vendor platforms have no public
-  simulator at all (e.g. Dell PowerMax) or require a vendor support account
-  (e.g. NetApp's ONTAP Simulator) — credible mocking needs partnerships with
-  each software provider to provision training licenses/accounts, not just
-  more engineering time (see [no-sim-justification.md](no-sim-justification.md))
-- Recorded/replayed or AI-generated fake output looks plausible but gets
-  subtle details (column widths, edge cases, failure modes) wrong — a real
-  operator clocks it immediately, which undermines the "prove real
-  understanding" premise
-
-## Slide 19 — Employer Matching
-
-- Employer lists required course credentials for a role
-- System returns every candidate who **genuinely earned** them — all sections,
-  all credentials issued
-- No ranking algorithm, no black box — rule-based on verified prerequisites
-- Employer sees linked exercise history and summaries, not raw personal data
-
-**Example:** Role requires `storage-fundamentals-101` +
-`network-troubleshooting-201`. Candidate A completed both → matched. Candidate B
-completed only sections 2.1–2.2 of the second course → not matched, regardless of
-resume strength.
-
-## Slide 20 — MVP Scope Boundaries
-
-| In MVP scope | Out of scope (future) |
-|---|---|
-| Solution 1 — MCs, depth scoring, decay | Solution 3 full sandbox (K8s + Terraform) |
-| Solution 2 — gated course creation | Live LinkedIn scraping pipeline |
-| Single-server stack (FastAPI + Claude via OpenRouter + SQLite) | Horizontal scaling / distributed infra |
-| Human review of every AI-drafted course | Human appeal workflow for disputed evaluations |
-| Recruiter-facing skill tracing | Formal legal PDPA sign-off |
-
-## Slide 21 — Tech Stack
-
-| Layer | Technology | Why |
-|---|---|---|
-| Backend | Python + FastAPI | Fast to build, routes every learner message to Claude and back |
-| AI Engine | Claude, via OpenRouter | Socratic teaching, evaluation, course drafting |
-| Database | SQLite | One file, no separate server, reliable at this scale |
-| Frontend | Plain HTML/CSS/JS | No build tools, nothing to break live in a demo |
-| Hosting | Self-managed Linux, systemd | Runs permanently, auto-restarts, independent of any one machine |
-
-Direct model calls to Claude via OpenRouter, not a heavier agent framework —
-precise control over teaching/evaluation prompts without unnecessary
-complexity, and the model/provider stays a config value instead of a
-hardcoded SDK dependency.
-
-## Slide 22 — Key Decisions (Load-Bearing)
-
-- Bottom-up competency signal, not top-down completion
-- Full transparency to evidence — no black-box scores
-- Competency decay models real atrophy; frozen while employed
-- Sequential gated sections — can't skip ahead
-- Human expert reviews every AI-drafted course before publish
-- Matching is rule-based on verified prerequisites, not a ranking model
-
-## Slide 23 — Open Questions
-
-- What's the exact formula combining speed / explanation quality / question
-  sharpness into one 0–10 depth score? *(needs product/eng sign-off)*
-- Is the "no PDPA concerns" claim for recruiter-visible tracing actually correct
-  under Indonesian law? *(needs legal read before broad rollout)*
-- Sandbox realism is resolved as a vendor-partnership problem, not an
-  engineering one — who owns outreach to NetApp/Dell/etc. for training-account
-  access? *(see Slide 24)*
-- What does a human-review/appeal path for disputed AI evaluations look like?
-  *(post-MVP)*
-- How will live LinkedIn job scraping work — rate limits, ToS, freshness?
-  *(post-MVP)*
-
-## Slide 24 — Roadmap: Near-Term (Post-MVP)
-
-- **Section-gating enforcement** — lock section access server-side, not just
-  track status (closes the current implementation gap)
-- **Human review/appeal workflow** — a recorded, checkable approval gate for
-  AI-drafted courses, and a path to contest a disputed evaluation
-- **Live LinkedIn job scraping** — replace the MVP's hand-picked sample job
-  description with a real, per-user job feed
-- **Bahasa Indonesia support** — lower the barrier for Batam's SMA/SMK-majority
-  workforce, most of whom aren't native English speakers
-- **Formal PDPA legal sign-off** on recruiter-visible skill tracing
-
-## Slide 25 — Roadmap: Further Out
-
-- **Voice-to-text conversation** — talk through an explanation instead of
-  typing it; more natural Socratic dialogue, lower barrier for learners less
-  comfortable writing long answers
-- **Sandbox incident simulation, revived** — once vendor partnerships (NetApp,
-  Dell, etc.) provide real training-account access (see Slide 18)
-- **Employer analytics dashboard** — skill-gap visibility across an entire
-  talent pool, not just per-candidate matching
-- **Beyond Batam / data centers** — the course → gated section → evidence-based
-  credential mechanism is built to generalize to other regions and industries
-- **Government program integration** — e.g. Kartu Prakerja, SkillsFuture/TeSA —
-  as a verified-competency layer on top of existing subsidized training
-
-## Slide 26 — Closing
-
-"This isn't about replacing human trainers. It's about giving Batam's workforce a
-fast, honest way to prove they're ready for these new roles — and giving
-employers, whether in Batam or across the strait in Singapore, a reason to
-actually trust that signal."
+## Slide 1 — The Problem
+
+Hook quote + condensed problem stats in one slide:
+
+- Hook: "Batam's data-center boom is creating real technical jobs... how do
+  you close that gap fast, and how does an employer trust someone is ready?"
+- Batam open unemployment 7.68% (50,431 people); only 13.74% tertiary-qualified
+- Data centers are capital-, not labour-intensive: 50–150 permanent jobs per
+  facility vs. 8,000–12,000 for equivalent manufacturing investment
+- Self-taught workers walk away with a "Certificate of Completion" that
+  proves a video was watched, not that the material was understood
+- Employers are left guessing — resume claims, interviews, platform prestige
+
+## Slide 2 — The Solution
+
+Three-column layout, one column per solution, each compressed to a single
+problem/how/differentiator paragraph:
+
+1. **Micro-Credentials** — AI-scored 0–10, evidence-logged, decays while
+   unemployed, frozen while employed in the role
+2. **Gated Course Creation** — AI builds courses from real job descriptions;
+   sections unlock only via a real Socratic conversation; human-reviewed
+3. **Sandbox Simulation** *(exploratory)* — cloud workspace mocks a real
+   incident, verified by an automated test suite; blocked on vendor
+   simulator access, not engineering effort
+
+Plus one line on employer matching: rule-based on verified prerequisites,
+no ranking black box.
+
+## Slide 3 — MVP, Tech & What's Next
+
+Two-column layout:
+
+- **Left:** MVP scope (Solutions 1 & 2, FastAPI + Claude/OpenRouter +
+  SQLite, human review of every AI draft) + key load-bearing decisions
+  (bottom-up signal, full transparency, rule-based matching)
+- **Right:** Roadmap — near-term (server-side gating enforcement, appeal
+  workflow, live job scraping, Bahasa Indonesia, PDPA sign-off) and further
+  out (voice-to-text, sandbox revived, employer analytics, beyond Batam,
+  government program integration)
+
+Closes with the same closing quote as before: "This isn't about replacing
+human trainers..."
 
 ---
 
-## Appendix — Q&A Backup
+## Appendix — Q&A Backup *(unnumbered, not part of the 3)*
 
-### A1. Isn't scoring learners a privacy concern?
+Unchanged from the full deck — four backup slides for anticipated
+questions:
 
-Fully transparent — the learner knows from sign-up that conversations are
-evaluated and that evaluation is what employers see. Nothing hidden; that
-transparency is itself part of the trust mechanism. (PDPA legal verification is
-still an open item — see Slide 23.)
+1. Isn't scoring learners a privacy concern?
+2. How would this scale to thousands of users?
+3. Why not build on an existing platform?
+4. What if the AI evaluation is wrong or unfair?
 
-### A2. How would this scale to thousands of users?
+---
 
-Architecture doesn't need to change — every conversation is already an
-independent API call, so it scales horizontally. The real cost driver is AI API
-usage, which scales with actual usage rather than fixed infrastructure.
+## What got cut / folded from the original 26-slide deck
 
-### A3. Why not build on an existing platform?
+Everything below was either folded into the 3 slides above (compressed to a
+line or a phrase) or dropped as a standalone slide because it was
+implementation detail rather than pitch-critical:
 
-Existing platforms prove content consumption, not understanding — that's exactly
-the gap this exists to close. Direct model calls to Claude via OpenRouter (not a
-heavier framework) give precise control over teaching/evaluation prompts without
-unnecessary complexity at this stage.
+- Separate "Who Hurts", "Current Workaround Fails", "Why Now" slides →
+  folded into Slide 1's problem bullets
+- Separate "Goals" / "Non-Goals" slides → dropped (implicit in the solution
+  framing; revive if a reviewer asks)
+- "Inside a Micro-Credential", "Depth Score", "Competency Decay" detail
+  slides → compressed to one sentence in Slide 2's first column
+- "How a Course Gets Built", "Section Gating Worked Example" → compressed
+  to one sentence in Slide 2's second column
+- "Inside the Sandbox" (K8s/Terraform mechanics, vendor blocker detail) →
+  compressed to one sentence in Slide 2's third column
+- "Employer Matching" detail + worked example → compressed to one line
+  under the solution columns
+- "MVP Scope Boundaries" table, "Tech Stack" table → compressed to bullet
+  fragments in Slide 3's left column
+- "Key Decisions" → compressed to bullet fragments in Slide 3's left column
+- "Open Questions" → dropped as a standalone slide (still worth having
+  answers ready — see Appendix Q&A backup)
+- "Roadmap: Near-Term" / "Roadmap: Further Out" → compressed to bullet
+  fragments in Slide 3's right column
+- "Closing" → folded into the bottom of Slide 3
 
-### A4. What if the AI evaluation is wrong or unfair?
-
-Every score is backed by a quoted excerpt from what the learner actually said —
-evidence-based, not a bare number. A production version would add a human
-review/appeal path on top of the same evidence log (not built yet — see Slide 23).
+If a reviewer wants the full detail on any compressed point, the original
+26-slide version is recoverable from git history (`git log -- slides/slides.md`).

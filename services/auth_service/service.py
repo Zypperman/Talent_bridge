@@ -4,16 +4,14 @@ completely separate account types with their own tables.
 """
 
 import bcrypt
+import libsql
 import os
 import secrets
-import sqlite3
 from datetime import datetime, timezone
-
-_DB_PATH = os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db")
 
 
 def _get_db():
-    return sqlite3.connect(_DB_PATH, check_same_thread=False)
+    return libsql.connect(os.environ["TURSO_DATABASE_URL"], auth_token=os.environ["TURSO_AUTH_TOKEN"])
 
 
 def hash_password(password: str) -> str:

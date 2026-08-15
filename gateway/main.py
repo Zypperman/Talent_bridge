@@ -1,15 +1,14 @@
 from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import os, sqlite3, json
+import os, libsql, json
 from datetime import datetime, timezone
-from common.rpc import RPCClient, ServiceError, ServiceUnavailableError
+from dotenv import load_dotenv
+from services.auth_service import service as auth_service
+from services.teaching_service import service as teaching_service
 
-DB_PATH = os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db")
-db = sqlite3.connect(DB_PATH, check_same_thread=False)
-
-auth_client = RPCClient("auth")
-teaching_client = RPCClient("teaching", timeout=60)
+load_dotenv()
+db = libsql.connect(os.environ["TURSO_DATABASE_URL"], auth_token=os.environ["TURSO_AUTH_TOKEN"])
 
 app = FastAPI()
 
@@ -77,14 +76,11 @@ class JobPostingRequest(BaseModel):
     required_course_ids: list
 
 
-async def get_account(authorization: str | None):
+def get_account(authorization: str | None):
     if authorization is None:
         return None
     token = authorization.replace("Bearer ", "").strip()
-    try:
-        return await auth_client.call("get_account_from_token", {"token": token})
-    except (ServiceError, ServiceUnavailableError):
-        return None
+    return auth_service.get_account_from_token(token)
 
 
 def get_conversation(user_id, section_id):
@@ -151,53 +147,43 @@ def issue_credential_if_complete(user_id, course_id):
 
 
 @app.post("/api/auth/signup/user")
-async def signup_user(req: UserSignupRequest):
+def signup_user(req: UserSignupRequest):
     try:
-        return await auth_client.call("signup_user", req.model_dump())
-    except ServiceError as e:
+        return auth_service.signup_user(**req.model_dump())
+    except ValueError as e:
         return {"error": str(e)}
-    except ServiceUnavailableError:
-        return {"error": "Auth service is unavailable, please try again"}
 
 @app.post("/api/auth/login/user")
-async def login_user(req: LoginRequest):
+def login_user(req: LoginRequest):
     try:
-        return await auth_client.call("login_user", req.model_dump())
-    except ServiceError as e:
+        return auth_service.login_user(**req.model_dump())
+    except ValueError as e:
         return {"error": str(e)}
-    except ServiceUnavailableError:
-        return {"error": "Auth service is unavailable, please try again"}
 
 @app.post("/api/auth/signup/employer")
-async def signup_employer(req: EmployerSignupRequest):
+def signup_employer(req: EmployerSignupRequest):
     try:
-        return await auth_client.call("signup_employer", req.model_dump())
-    except ServiceError as e:
+        return auth_service.signup_employer(**req.model_dump())
+    except ValueError as e:
         return {"error": str(e)}
-    except ServiceUnavailableError:
-        return {"error": "Auth service is unavailable, please try again"}
 
 @app.post("/api/auth/login/employer")
-async def login_employer(req: LoginRequest):
+def login_employer(req: LoginRequest):
     try:
-        return await auth_client.call("login_employer", req.model_dump())
-    except ServiceError as e:
+        return auth_service.login_employer(**req.model_dump())
+    except ValueError as e:
         return {"error": str(e)}
-    except ServiceUnavailableError:
-        return {"error": "Auth service is unavailable, please try again"}
 
 @app.post("/api/auth/login/admin")
-async def login_admin(req: LoginRequest):
+def login_admin(req: LoginRequest):
     try:
-        return await auth_client.call("login_admin", req.model_dump())
-    except ServiceError as e:
+        return auth_service.login_admin(**req.model_dump())
+    except ValueError as e:
         return {"error": str(e)}
-    except ServiceUnavailableError:
-        return {"error": "Auth service is unavailable, please try again"}
 
 @app.get("/api/auth/me")
-async def me(authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def me(authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None:
         return {"error": "Not authenticated"}
     return {"account": account}
@@ -208,8 +194,8 @@ def list_courses():
     return {"courses": [{"id": r[0], "slug": r[1], "title": r[2], "description": r[3]} for r in rows]}
 
 @app.get("/api/courses/{course_id}/sections")
-async def list_sections(course_id: int, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def list_sections(course_id: int, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     rows = db.execute(
         "SELECT id, section_number, title FROM sections WHERE course_id = ? ORDER BY display_order",
         (course_id,)
@@ -230,8 +216,8 @@ async def list_sections(course_id: int, authorization: str | None = Header(None)
     return {"sections": sections}
 
 @app.get("/api/sections/{section_id}")
-async def get_section(section_id: int, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def get_section(section_id: int, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "user":
         return {"error": "Not authenticated"}
 
@@ -257,8 +243,8 @@ async def get_section(section_id: int, authorization: str | None = Header(None))
         "conversation": conversation
     }
 @app.post("/api/chat")
-async def chat(req: ChatRequest, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def chat(req: ChatRequest, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "user":
         return {"error": "Not authenticated"}
 
@@ -272,18 +258,16 @@ async def chat(req: ChatRequest, authorization: str | None = Header(None)):
     conversation.append({"role": "user", "content": req.message})
 
     try:
-        reply = await teaching_client.call("generate_teaching_reply", {
-            "section_content": section_content, "conversation": conversation
-        })
-    except ServiceUnavailableError:
+        reply = teaching_service.generate_teaching_reply(section_content, conversation)
+    except Exception:
         return {"error": "Teaching service is unavailable, please try again"}
     save_message(account["id"], req.section_id, "assistant", reply)
 
     return {"reply": reply}
 
 @app.post("/api/sections/complete")
-async def complete_section(req: CompleteSectionRequest, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def complete_section(req: CompleteSectionRequest, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "user":
         return {"error": "Not authenticated"}
 
@@ -297,10 +281,8 @@ async def complete_section(req: CompleteSectionRequest, authorization: str | Non
         return {"error": "No conversation to evaluate"}
 
     try:
-        evaluation = await teaching_client.call("evaluate_section", {
-            "section_content": section_content, "conversation": conversation
-        })
-    except ServiceUnavailableError:
+        evaluation = teaching_service.evaluate_section(section_content, conversation)
+    except Exception:
         return {"error": "Teaching service is unavailable, please try again"}
 
     db.execute(
@@ -318,8 +300,8 @@ async def complete_section(req: CompleteSectionRequest, authorization: str | Non
     return {"completed": True, "credential_issued": credential_issued}
 
 @app.get("/api/my/credentials")
-async def my_credentials(authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def my_credentials(authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "user":
         return {"error": "Not authenticated"}
 
@@ -331,8 +313,8 @@ async def my_credentials(authorization: str | None = Header(None)):
     return {"credentials": [{"course_title": r[0], "issued_at": r[1]} for r in rows]}
 
 @app.get("/api/employer/candidates")
-async def list_candidates(authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def list_candidates(authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "employer":
         return {"error": "Not authenticated"}
 
@@ -356,8 +338,8 @@ async def list_candidates(authorization: str | None = Header(None)):
     return {"candidates": result}
 
 @app.post("/api/employer/jobs")
-async def create_job(req: JobPostingRequest, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def create_job(req: JobPostingRequest, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "employer":
         return {"error": "Not authenticated"}
 
@@ -369,8 +351,8 @@ async def create_job(req: JobPostingRequest, authorization: str | None = Header(
     return {"success": True}
 
 @app.get("/api/employer/jobs")
-async def list_jobs(authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def list_jobs(authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "employer":
         return {"error": "Not authenticated"}
 
@@ -395,8 +377,8 @@ async def list_jobs(authorization: str | None = Header(None)):
     return {"jobs": jobs}
 
 @app.get("/api/admin/users")
-async def admin_list_users(authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def admin_list_users(authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "admin":
         return {"error": "Not authenticated"}
 
@@ -416,8 +398,8 @@ async def admin_list_users(authorization: str | None = Header(None)):
     return {"users": users}
 
 @app.get("/api/admin/users/{user_id}")
-async def admin_get_user(user_id: int, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def admin_get_user(user_id: int, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "admin":
         return {"error": "Not authenticated"}
 
@@ -459,8 +441,8 @@ async def admin_get_user(user_id: int, authorization: str | None = Header(None))
     return {"user": user, "courses": courses}
 
 @app.post("/api/admin/users/{user_id}/sections/{section_id}/override")
-async def admin_override_section(user_id: int, section_id: int, req: AdminOverrideSectionRequest, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def admin_override_section(user_id: int, section_id: int, req: AdminOverrideSectionRequest, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "admin":
         return {"error": "Not authenticated"}
 
@@ -482,8 +464,8 @@ async def admin_override_section(user_id: int, section_id: int, req: AdminOverri
     return {"completed": True, "credential_issued": credential_issued}
 
 @app.post("/api/admin/users/{user_id}/sections/bulk_override")
-async def admin_bulk_override_sections(user_id: int, req: AdminBulkOverrideRequest, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def admin_bulk_override_sections(user_id: int, req: AdminBulkOverrideRequest, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "admin":
         return {"error": "Not authenticated"}
 
@@ -511,8 +493,8 @@ async def admin_bulk_override_sections(user_id: int, req: AdminBulkOverrideReque
     return {"completed": len(req.section_ids), "credentials_issued": credentials_issued}
 
 @app.post("/api/admin/users/{user_id}/sections/bulk_revert")
-async def admin_bulk_revert_sections(user_id: int, req: AdminBulkRevertRequest, authorization: str | None = Header(None)):
-    account = await get_account(authorization)
+def admin_bulk_revert_sections(user_id: int, req: AdminBulkRevertRequest, authorization: str | None = Header(None)):
+    account = get_account(authorization)
     if account is None or account["account_type"] != "admin":
         return {"error": "Not authenticated"}
 

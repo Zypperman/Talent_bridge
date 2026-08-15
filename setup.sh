@@ -11,21 +11,19 @@ fi
 
 # 2. .env
 if [ ! -f ".env" ]; then
-    echo "Creating .env (fill in OPENROUTER_KEY before chatting or seeding courses)..."
-    echo "OPENROUTER_KEY=" > .env
+    echo "Creating .env (fill in OPENROUTER_KEY, TURSO_DATABASE_URL, TURSO_AUTH_TOKEN before running)..."
+    printf 'OPENROUTER_KEY=\nTURSO_DATABASE_URL=\nTURSO_AUTH_TOKEN=\n' > .env
 fi
 
-# 3. Data directory (bind-mounted into the gateway/auth-service/teaching-service containers)
-mkdir -p data
+# 3. Build and run the gateway (the app talks to a remote Turso database, so
+#    there's no local data directory to bind-mount anymore)
+echo "Building and starting the gateway..."
+echo "Gateway will be available at http://127.0.0.1:8000 once the container is up."
 
-# 4. Build and run every service (gateway, auth-service, teaching-service, redis)
-echo "Building and starting services..."
-echo "Gateway will be available at http://127.0.0.1:8000 once containers are up."
-
-if ! grep -q "OPENROUTER_KEY=." .env 2>/dev/null; then
-    echo "Note: OPENROUTER_KEY is not set in .env yet, so teaching-service will fail to answer chats/evaluations until you set it and restart."
+if ! grep -q "OPENROUTER_KEY=." .env 2>/dev/null || ! grep -q "TURSO_DATABASE_URL=." .env 2>/dev/null; then
+    echo "Note: OPENROUTER_KEY / TURSO_DATABASE_URL / TURSO_AUTH_TOKEN are not all set in .env yet — the app will fail to start until they are."
 fi
-echo "Once OPENROUTER_KEY is set and containers are running, seed courses (once) with:"
-echo "    docker compose run --rm teaching-service python generate_courses.py"
+echo "Once your .env is filled in, seed courses (once) with:"
+echo "    python generate_courses.py"
 
 docker compose up --build

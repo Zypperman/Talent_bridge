@@ -1,48 +1,12 @@
 services:
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-
-  auth-service:
-    build:
-      context: .
-      dockerfile: services/auth_service/Dockerfile
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      TALENTBRIDGE_DB_PATH: /data/talentbridge.db
-    volumes:
-      - ./data:/data
-    depends_on:
-      - redis
-    restart: unless-stopped
-
-  teaching-service:
-    build:
-      context: .
-      dockerfile: services/teaching_service/Dockerfile
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      TALENTBRIDGE_DB_PATH: /data/talentbridge.db
-      OPENROUTER_KEY: ${OPENROUTER_KEY}
-    volumes:
-      - ./data:/data
-    depends_on:
-      - redis
-    restart: unless-stopped
-
   gateway:
     build:
       context: .
       dockerfile: gateway/Dockerfile
     environment:
-      REDIS_URL: redis://redis:6379/0
-      TALENTBRIDGE_DB_PATH: /data/talentbridge.db
-    volumes:
-      - ./data:/data
+      OPENROUTER_KEY: ${OPENROUTER_KEY}
+      TURSO_DATABASE_URL: ${TURSO_DATABASE_URL}
+      TURSO_AUTH_TOKEN: ${TURSO_AUTH_TOKEN}
     ports:
       - "8000:8000"
-    depends_on:
-      - redis
-      - auth-service
-      - teaching-service
     restart: unless-stopped

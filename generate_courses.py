@@ -1,11 +1,11 @@
-import os, sqlite3, json
+import os, libsql, json
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENROUTER_KEY"), base_url="https://openrouter.ai/api/v1")
 MODEL = "anthropic/claude-sonnet-4-6"
-db = sqlite3.connect(os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db"))
+db = libsql.connect(os.environ["TURSO_DATABASE_URL"], auth_token=os.environ["TURSO_AUTH_TOKEN"])
 
 _schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 db.executescript(open(_schema_path).read())

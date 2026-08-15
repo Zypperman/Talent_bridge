@@ -1,0 +1,9 @@
+slides/
+docs/
+data/
+.venv/
+__pycache__/
+.pytest_cache/
+*.db
+node_modules/
+.git/

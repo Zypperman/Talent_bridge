@@ -37,45 +37,41 @@ An earlier design ([docs/Sandbox_Architecture.md](docs/Sandbox_Architecture.md))
 
 | Layer | Technology | Why |
 | --- | --- | --- |
-| Gateway | Python + FastAPI | Owns the `/api/*` surface and the frontend; talks to auth/teaching over RPC |
-| Auth service | Python, standalone process | Signup/login + token auth for learners and employers, isolated from the rest of the app |
-| Teaching service | Python, standalone process | Socratic teaching replies + section evaluation via Claude, isolated so an AI-call slowdown can't block auth or course browsing |
-| Service messaging | Redis (request/reply queues) | Gateway and services run as independent processes/containers and talk over a queue instead of function calls |
+| App | Python + FastAPI | A single process owns the `/api/*` surface, the frontend, and the auth/teaching business logic (imported as plain modules — no RPC hop) |
 | AI engine | Claude, via [OpenRouter](https://openrouter.ai/) | Powers Socratic teaching, post-conversation evaluation, and initial course content drafting; routed through OpenRouter's OpenAI-compatible API so the model/provider is a config value, not a hardcoded SDK dependency |
-| Database | SQLite | Single shared file, no separate DB server — simple and reliable at this scale; bind-mounted into every container that needs it |
+| Database | [Turso](https://turso.tech/) (libSQL, SQLite-compatible) | Same SQL dialect and schema as plain SQLite, but reachable over the network — required once the app runs as stateless serverless functions instead of one long-lived process with a local file |
 | Frontend | Plain HTML/CSS/JavaScript | No build step, one file, nothing to break live during a demo |
-| Deployment | Docker Compose | Each service builds and runs as its own container; `docker compose up` brings up the whole system |
+| Deployment | Vercel (serverless) or Docker Compose | One FastAPI app runs unchanged either way — `vercel deploy` or `docker compose up` |
+
+Earlier versions split auth and teaching into standalone processes talking to the
+gateway over Redis request/reply queues, for process isolation. That model doesn't
+run on serverless platforms (no persistent processes, no Redis server), and since this
+app is small enough that the isolation wasn't paying for itself, it was collapsed into
+one process — see [Deploying to Vercel](#deploying-to-vercel).
 
 ## Project structure
 
 ```text
 Talent_bridge/
 ├── gateway/
-│   ├── main.py               # FastAPI app: all API routes, serves static/ as the frontend
-│   ├── entrypoint.sh          # Applies schema.sql then starts uvicorn
-│   ├── Dockerfile
-│   └── requirements.txt
+│   ├── main.py               # FastAPI app: all API routes, calls services/* directly, serves static/ as the frontend
+│   ├── entrypoint.sh          # Applies schema.sql (to Turso) then starts uvicorn
+│   └── Dockerfile
 ├── services/
 │   ├── auth_service/
-│   │   ├── service.py         # Signup/login + token auth business logic
-│   │   ├── worker.py          # RPC worker: serves auth requests from the `queue:auth` Redis queue
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
+│   │   └── service.py         # Signup/login + token auth business logic, imported directly by gateway/main.py
 │   └── teaching_service/
-│       ├── service.py         # Socratic teaching replies + section evaluation via Claude
-│       ├── worker.py          # RPC worker: serves requests from the `queue:teaching` Redis queue
-│       ├── Dockerfile
-│       └── requirements.txt
-├── common/
-│   └── rpc.py                 # Shared Redis request/reply RPC client (gateway) + worker loop (services)
+│       └── service.py         # Socratic teaching replies + section evaluation via Claude, imported directly by gateway/main.py
 ├── generate_courses.py       # One-off script: AI-drafts course sections and seeds the DB
 ├── create_admin.py           # One-off script: creates an admin account (no public signup endpoint)
 ├── static/
 │   ├── index.html            # Learner/employer frontend (single page, no build tools)
 │   └── admin.html            # Admin console: per-learner conversation history
-├── schema.sql                 # SQLite table definitions (idempotent, applied automatically by the gateway container)
-├── docker-compose.yml          # Orchestrates redis, auth-service, teaching-service, gateway
-├── requirements.txt            # Convenience "everything" file for running components without Docker
+├── schema.sql                 # SQLite/libSQL table definitions (idempotent, applied automatically on startup)
+├── docker-compose.yml          # Single `gateway` container, for local/self-hosted use
+├── pyproject.toml              # Points Vercel's Python runtime at gateway/main.py's `app`
+├── vercel.json                  # Vercel function config (maxDuration for the OpenRouter calls)
+├── requirements.txt            # Single dependency list — used by Vercel, Docker, and local `uvicorn`
 ├── setup.sh / setup.ps1        # One-shot local setup and run via Docker Compose (bash / PowerShell)
 └── docs/                     # Product requirements, architecture notes, pitch materials — including
                                # Sandbox_Architecture.md and no-sim-justification.md for the removed sandbox feature
@@ -85,12 +81,13 @@ Talent_bridge/
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/) with Compose v2 (`docker compose ...`)
+- A [Turso](https://turso.tech/) database (free tier is fine) — this is the app's only datastore
 - An [OpenRouter API key](https://openrouter.ai/keys)
+- [Docker](https://www.docker.com/) with Compose v2, if running locally via Docker
 
-### Quick start
+### Quick start (Docker)
 
-`setup.sh` (Linux/macOS/Git Bash) and `setup.ps1` (Windows PowerShell) each do the full local setup: create `.env` if missing, create the `data/` directory that's bind-mounted into the containers, then build and start every service with Docker Compose.
+`setup.sh` (Linux/macOS/Git Bash) and `setup.ps1` (Windows PowerShell) each do the full local setup: create `.env` if missing, then build and start the gateway with Docker Compose.
 
 ```bash
 ./setup.sh
@@ -100,48 +97,81 @@ Talent_bridge/
 .\setup.ps1
 ```
 
-The gateway comes up at `http://127.0.0.1:8000`. On startup it applies `schema.sql` to `data/talentbridge.db` automatically (safe to run repeatedly — every statement is `CREATE ... IF NOT EXISTS`).
+The gateway comes up at `http://127.0.0.1:8000`. On startup it applies `schema.sql` to your Turso database automatically (safe to run repeatedly — every statement is `CREATE ... IF NOT EXISTS`).
 
-If `.env` doesn't have `OPENROUTER_KEY` set yet, `teaching-service` will start but fail Claude calls — fill it in and re-run `docker compose up --build`. Once it's set and the containers are running, seed the courses table (once, if empty):
+Fill in `OPENROUTER_KEY`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` in `.env` before starting, or the container will fail to connect. Once it's running, seed the courses table (once, if empty):
 
 ```bash
-docker compose run --rm teaching-service python generate_courses.py
+python generate_courses.py
 ```
-
-Every service reads `TALENTBRIDGE_DB_PATH` (set to `/data/talentbridge.db` inside the containers via `docker-compose.yml`) and `REDIS_URL` (set to `redis://redis:6379/0`) from the environment.
 
 ### Admin console
 
 There's no public signup for admin accounts — the console shows every learner's private conversation transcripts, so admins are provisioned out-of-band with `create_admin.py` rather than through the API:
 
 ```bash
-docker compose run --rm auth-service python create_admin.py you@example.com yourpassword "Your Name"
+python create_admin.py you@example.com yourpassword "Your Name"
 ```
 
 Then log in at `http://127.0.0.1:8000/admin.html`. The console lists every learner and, per learner, their full section-by-section conversation history (with scores/evidence).
 
 ### Manual setup (without Docker)
 
-Each piece can also run locally as a plain Python process — useful for quick iteration on one service. You'll need a local Redis instance (`redis-server`, or `docker run -p 6379:6379 redis:7-alpine`) and to run the gateway plus each service in separate terminals:
-
 ```bash
 python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\Activate.ps1 on Windows
 pip install -r requirements.txt
-echo "OPENROUTER_KEY=your-api-key-here" > .env
-export TALENTBRIDGE_DB_PATH="$(pwd)/data/talentbridge.db"   # $env:TALENTBRIDGE_DB_PATH = ... on Windows
-export REDIS_URL="redis://localhost:6379/0"                 # $env:REDIS_URL = ... on Windows
-export PYTHONPATH="$(pwd)"                                   # $env:PYTHONPATH = ... on Windows — lets gateway/ and services/*/ import common.rpc
-mkdir -p data
-python -c "import sqlite3; sqlite3.connect('data/talentbridge.db').executescript(open('schema.sql').read())"
+printf 'OPENROUTER_KEY=your-api-key-here\nTURSO_DATABASE_URL=libsql://your-db.turso.io\nTURSO_AUTH_TOKEN=your-token\n' > .env
+python -c "import os, libsql; from dotenv import load_dotenv; load_dotenv(); libsql.connect(os.environ['TURSO_DATABASE_URL'], auth_token=os.environ['TURSO_AUTH_TOKEN']).executescript(open('schema.sql').read())"
 python generate_courses.py   # seeds courses, requires OPENROUTER_KEY
-
-# in three separate terminals (same env vars in each):
-python services/auth_service/worker.py
-python services/teaching_service/worker.py
-uvicorn main:app --reload --app-dir gateway
+uvicorn gateway.main:app --reload
 ```
 
 The API is served under `/api/*`, and the frontend at `static/index.html` is mounted at `/`.
+
+## Deploying to Vercel
+
+The app is a single FastAPI app (`gateway/main.py`), so it deploys to Vercel as one
+serverless function; `pyproject.toml` points Vercel at it and `vercel.json` raises the
+function's timeout to 60s to give OpenRouter/Claude room to respond on the chat and
+evaluation endpoints.
+
+1. **Create a Turso database** (skip if you already have one from local setup):
+
+   ```bash
+   curl -sSfL https://get.tur.so/install.sh | bash   # or: brew install tursodatabase/tap/turso
+   turso auth signup   # or `turso auth login` if you already have an account
+   turso db create talent-bridge
+   turso db show talent-bridge --url          # → TURSO_DATABASE_URL
+   turso db tokens create talent-bridge       # → TURSO_AUTH_TOKEN
+   turso db shell talent-bridge < schema.sql  # applies the schema (idempotent)
+   ```
+
+2. **Seed courses and create an admin account**, run once from your machine with
+   `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` / `OPENROUTER_KEY` set in `.env`:
+
+   ```bash
+   python generate_courses.py
+   python create_admin.py you@example.com yourpassword "Your Name"
+   ```
+
+3. **Deploy to Vercel**:
+
+   ```bash
+   npm i -g vercel
+   vercel login
+   vercel link                 # creates/links the Vercel project
+   vercel env add OPENROUTER_KEY production
+   vercel env add TURSO_DATABASE_URL production
+   vercel env add TURSO_AUTH_TOKEN production
+   vercel deploy --prod
+   ```
+
+   (Repeat the `vercel env add` commands for the `preview`/`development` environments
+   too if you want `vercel dev` and preview deploys to work.)
+
+Once deployed, the app is available at your `*.vercel.app` URL — `/` serves
+`static/index.html`, `/admin.html` serves the admin console, and `/api/*` is the same
+API described below.
 
 ## Slides (Marp deck)
 

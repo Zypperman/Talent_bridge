@@ -4,4 +4,4 @@ pydantic
 bcrypt
 openai
 python-dotenv
-redis
+libsql

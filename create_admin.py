@@ -10,12 +10,13 @@ Usage: python create_admin.py <email> <password> <name>
 
 import argparse
 import os
-import sqlite3
 from datetime import datetime, timezone
 
 import bcrypt
+import libsql
+from dotenv import load_dotenv
 
-DB_PATH = os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db")
+load_dotenv()
 
 parser = argparse.ArgumentParser(description="Create a Talent Bridge admin account")
 parser.add_argument("email")
@@ -23,7 +24,7 @@ parser.add_argument("password")
 parser.add_argument("name")
 args = parser.parse_args()
 
-db = sqlite3.connect(DB_PATH)
+db = libsql.connect(os.environ["TURSO_DATABASE_URL"], auth_token=os.environ["TURSO_AUTH_TOKEN"])
 
 _schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 db.executescript(open(_schema_path).read())
