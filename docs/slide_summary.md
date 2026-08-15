@@ -4,7 +4,7 @@ Content outline derived from `Product Requirement Document_draft.md`, restructur
 slide-by-slide. This is the planning doc; the presentable Marp deck built from it
 lives at `slides/slides.md` (run `npm run preview` inside `slides/` to view it).
 
-Each `## Slide N` entry becomes one slide. Lines under `Notes:` are speaker notes,
+## Each `## Slide N` entry becomes one slide. Lines under `Notes:` are speaker notes,
 not on-slide content. Each of the three solutions gets an intro slide in a fixed
 three-part format — **problem it addresses → how it solves that problem → what's
 different from existing solutions** — followed by whatever mechanics/detail slides

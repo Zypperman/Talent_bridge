@@ -44,13 +44,34 @@
   details.override { margin-top: 14px; font-size: 13px; }
   details.override summary { padding: 10px 14px; color: #e0b268; }
   details.override input { margin-bottom: 8px; }
+  .sel-check { width: auto; margin: 0; accent-color: #e0b268; cursor: pointer; }
+  .section-actions-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .section-actions-row a { color: #999; font-size: 12.5px; cursor: pointer; margin-left: 14px; }
+  .bulk-bar { position: fixed; left: 0; right: 0; bottom: 0; background: #17171a; border-top: 1px solid #2e2e30; padding: 14px 24px; z-index: 40; box-shadow: 0 -4px 16px rgba(0,0,0,0.35); }
+  .bulk-bar-inner { max-width: 860px; margin: 0 auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .bulk-bar .bulk-count { color: #e0b268; font-size: 13px; white-space: nowrap; font-weight: 600; }
+  .bulk-bar input { width: auto; flex: 1 1 130px; margin-bottom: 0; }
+  .bulk-bar button.primary { white-space: nowrap; }
+  .bulk-bar a { color: #999; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .bulk-bar .err { margin: 8px 0 0; max-width: 860px; margin-left: auto; margin-right: auto; }
+  a.danger { color: #e07a5f; font-size: 13px; cursor: pointer; }
+  a.danger:hover { text-decoration: underline; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal { background: #1a1a1c; border: 1px solid #2e2e30; border-radius: 12px; padding: 24px; max-width: 480px; width: 100%; max-height: 80vh; overflow-y: auto; }
+  .modal h2 { font-size: 17px; margin-bottom: 14px; }
+  .modal-body { font-size: 13px; color: #ccc; line-height: 1.5; }
+  .modal-body ul { margin: 10px 0 0 18px; }
+  .modal-body li { margin-bottom: 4px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 18px; align-items: center; margin-top: 18px; }
+  .modal-actions a { color: #999; font-size: 13px; cursor: pointer; }
+  .modal-actions button.primary:disabled { opacity: 0.6; cursor: default; }
 </style>
 </head>
 <body>
 <div class="container" id="app"></div>
 <script>
 const API = '';
-let state = { view: 'login', token: localStorage.getItem('tb_admin_token'), admin: null, users: [], currentUser: null };
+let state = { view: 'login', token: localStorage.getItem('tb_admin_token'), admin: null, users: [], currentUser: null, selectedSections: new Map() };
 
 async function api(path, method='GET', body=null) {
   const headers = { 'Content-Type': 'application/json' };
@@ -66,6 +87,58 @@ function logout() {
 }
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+
+function openModal({ title, bodyHtml, confirmLabel = 'Confirm', onConfirm }) {
+  const backdrop = el(`<div class="modal-backdrop"></div>`);
+  const modal = el(`
+    <div class="modal">
+      <h2>${title}</h2>
+      <div class="modal-body">${bodyHtml}</div>
+      <div class="err modal-err"></div>
+      <div class="modal-actions">
+        <a id="modalCancel">Cancel</a>
+        <button class="primary" id="modalConfirm">${confirmLabel}</button>
+      </div>
+    </div>
+  `);
+  backdrop.appendChild(modal);
+  document.body.appendChild(backdrop);
+  const close = () => backdrop.remove();
+  modal.querySelector('#modalCancel').onclick = close;
+  backdrop.onclick = (ev) => { if (ev.target === backdrop) close(); };
+  modal.querySelector('#modalConfirm').onclick = async () => {
+    const errEl = modal.querySelector('.modal-err');
+    const btn = modal.querySelector('#modalConfirm');
+    errEl.textContent = '';
+    btn.disabled = true;
+    try {
+      await onConfirm();
+      close();
+    } catch (e) {
+      errEl.textContent = e.message || 'Something went wrong.';
+      btn.disabled = false;
+    }
+  };
+  return { close };
+}
+
+function confirmRevert(items) {
+  const listHtml = items.map(i => `<li>${i.label}</li>`).join('');
+  openModal({
+    title: `Revert ${items.length} skill${items.length === 1 ? '' : 's'} to not started?`,
+    bodyHtml: `
+      <p>This clears the completion status, scores, and evidence for these skills. Any credential that depended on them will also be revoked.</p>
+      <ul>${listHtml}</ul>
+    `,
+    confirmLabel: `Revert ${items.length}`,
+    onConfirm: async () => {
+      const body = { section_ids: items.map(i => i.id) };
+      const res = await api(`/api/admin/users/${state.currentUser.id}/sections/bulk_revert`, 'POST', body);
+      if (res.error) throw new Error(res.error);
+      await nav('user_detail');
+    }
+  });
+}
 
 async function nav(view) { state.view = view; await render(); }
 
@@ -147,9 +220,10 @@ async function renderUserDetail() {
   const r = await api(`/api/admin/users/${state.currentUser.id}`);
   if (r.error) { return el(`<div><a class="back" onclick="nav('users')">← Learners</a><p class="err">${r.error}</p></div>`); }
   const { user, courses } = r;
+  state.selectedSections = new Map();
 
   const c = el(`
-    <div>
+    <div style="padding-bottom:90px">
       <a class="back" onclick="nav('users')">← Learners</a>
       <h1 style="font-size:22px">${user.name}</h1>
       <div class="profile-row">
@@ -159,10 +233,93 @@ async function renderUserDetail() {
         <span>${user.experience || 'No experience listed'}</span>
       </div>
 
-      <h2 style="margin-top:28px">Module conversation history</h2>
+      <div class="section-actions-row" style="margin-top:28px">
+        <h2 style="margin:0">Module conversation history</h2>
+        <div>
+          <a id="selectAll">Select all skills</a>
+          <a id="clearSelection">Clear selection</a>
+        </div>
+      </div>
       <div id="courses"></div>
+
+      <div class="bulk-bar" id="bulkBar" style="display:none">
+        <div class="bulk-bar-inner">
+          <span class="bulk-count" id="bulkCount">0 selected</span>
+          <input class="bulk-speed" type="number" step="0.1" placeholder="Speed score" />
+          <input class="bulk-explanation" type="number" step="0.1" placeholder="Explanation score" />
+          <input class="bulk-sharpness" type="number" step="0.1" placeholder="Question sharpness score" />
+          <input class="bulk-evidence" type="text" placeholder="Evidence / note (optional)" />
+          <button class="primary" id="bulkReviewBtn">Review & mark complete</button>
+          <a id="bulkRevertBtn" class="danger">Revert selected to not started</a>
+        </div>
+        <div class="err" id="bulkErr"></div>
+      </div>
     </div>
   `);
+
+  function updateBulkBar() {
+    const bar = c.querySelector('#bulkBar');
+    const n = state.selectedSections.size;
+    bar.style.display = n > 0 ? 'block' : 'none';
+    bar.querySelector('#bulkCount').textContent = `${n} skill${n === 1 ? '' : 's'} selected`;
+  }
+
+  c.querySelector('#selectAll').onclick = () => {
+    c.querySelectorAll('.sel-check').forEach(cb => { cb.checked = true; cb.onchange(); });
+  };
+  c.querySelector('#clearSelection').onclick = () => {
+    c.querySelectorAll('.sel-check').forEach(cb => { cb.checked = false; });
+    state.selectedSections.clear();
+    updateBulkBar();
+  };
+
+  c.querySelector('#bulkRevertBtn').onclick = () => {
+    const bar = c.querySelector('#bulkBar');
+    const errEl = bar.querySelector('#bulkErr');
+    errEl.textContent = '';
+    if (state.selectedSections.size === 0) { errEl.textContent = 'Select at least one skill.'; return; }
+    confirmRevert(Array.from(state.selectedSections.values()));
+  };
+
+  c.querySelector('#bulkReviewBtn').onclick = () => {
+    const bar = c.querySelector('#bulkBar');
+    const errEl = bar.querySelector('#bulkErr');
+    errEl.textContent = '';
+    if (state.selectedSections.size === 0) { errEl.textContent = 'Select at least one skill.'; return; }
+    const speed = parseFloat(bar.querySelector('.bulk-speed').value);
+    const explanation = parseFloat(bar.querySelector('.bulk-explanation').value);
+    const sharpness = parseFloat(bar.querySelector('.bulk-sharpness').value);
+    if ([speed, explanation, sharpness].some(v => Number.isNaN(v))) {
+      errEl.textContent = 'Speed, explanation, and question sharpness scores are required.';
+      return;
+    }
+    const evidence = bar.querySelector('.bulk-evidence').value || undefined;
+    const items = Array.from(state.selectedSections.values());
+    const listHtml = items.map(i => `<li>${i.label}</li>`).join('');
+
+    openModal({
+      title: `Mark ${items.length} skill${items.length === 1 ? '' : 's'} complete for ${user.name}?`,
+      bodyHtml: `
+        <p>This sets status to <strong>completed</strong> and applies these scores to every skill below:</p>
+        <div class="score-row" style="margin:10px 0">
+          <span>Speed: ${speed}</span><span>Explanation: ${explanation}</span><span>Question sharpness: ${sharpness}</span>
+        </div>
+        ${evidence ? `<div class="evidence">"${evidence}"</div>` : ''}
+        <ul>${listHtml}</ul>
+      `,
+      confirmLabel: `Mark ${items.length} complete`,
+      onConfirm: async () => {
+        const body = {
+          section_ids: items.map(i => i.id),
+          speed_score: speed, explanation_score: explanation, question_sharpness_score: sharpness
+        };
+        if (evidence !== undefined) body.evidence = evidence;
+        const res = await api(`/api/admin/users/${state.currentUser.id}/sections/bulk_override`, 'POST', body);
+        if (res.error) throw new Error(res.error);
+        await nav('user_detail');
+      }
+    });
+  };
 
   const coursesEl = c.querySelector('#courses');
   if (courses.length === 0) coursesEl.appendChild(el(`<p class="empty">No courses exist yet.</p>`));
@@ -173,7 +330,10 @@ async function renderUserDetail() {
     }
     course.sections.forEach(s => {
       const summary = `
-        <span>${s.section_number} — ${s.title}</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" class="sel-check" />
+          <span>${s.section_number} — ${s.title}</span>
+        </span>
         <span class="badge ${s.status}">${s.status.replace('_', ' ')}</span>
       `;
       const scoreRow = s.status === 'completed' ? `
@@ -204,9 +364,24 @@ async function renderUserDetail() {
                 <button class="primary ov-submit">Save override</button>
               </div>
             </details>
+            ${s.status !== 'not_started' ? `<a class="danger revert-link" style="display:inline-block;margin-top:10px">Revert to not started</a>` : ''}
           </div>
         </details>
       `);
+      const revertLink = detail.querySelector('.revert-link');
+      if (revertLink) {
+        revertLink.onclick = () => confirmRevert([{ id: s.id, label: `${course.title} · ${s.section_number} — ${s.title}` }]);
+      }
+      const selCheck = detail.querySelector('.sel-check');
+      selCheck.onclick = (ev) => ev.stopPropagation();
+      selCheck.onchange = () => {
+        if (selCheck.checked) {
+          state.selectedSections.set(s.id, { id: s.id, label: `${course.title} · ${s.section_number} — ${s.title}` });
+        } else {
+          state.selectedSections.delete(s.id);
+        }
+        updateBulkBar();
+      };
       detail.querySelector('.ov-submit').onclick = async (ev) => {
         ev.preventDefault();
         const errEl = detail.querySelector('.ov-err');

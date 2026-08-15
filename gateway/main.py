@@ -59,6 +59,18 @@ class AdminOverrideSectionRequest(BaseModel):
     evidence: str = "Manually overridden by admin."
 
 
+class AdminBulkOverrideRequest(BaseModel):
+    section_ids: list[int]
+    speed_score: float
+    explanation_score: float
+    question_sharpness_score: float
+    evidence: str = "Manually overridden by admin."
+
+
+class AdminBulkRevertRequest(BaseModel):
+    section_ids: list[int]
+
+
 class JobPostingRequest(BaseModel):
     title: str
     description: str
@@ -89,6 +101,28 @@ def save_message(user_id, section_id, role, content):
         (user_id, section_id, role, content, datetime.now(timezone.utc).isoformat())
     )
     db.commit()
+
+
+def apply_section_override(user_id, section_id, speed_score, explanation_score, question_sharpness_score, evidence):
+    now = datetime.now(timezone.utc).isoformat()
+    existing = db.execute(
+        "SELECT started_at FROM section_progress WHERE user_id = ? AND section_id = ?", (user_id, section_id)
+    ).fetchone()
+
+    if existing is None:
+        db.execute(
+            """INSERT INTO section_progress (user_id, section_id, status, speed_score, explanation_score,
+               question_sharpness_score, evidence, started_at, completed_at)
+               VALUES (?, ?, 'completed', ?, ?, ?, ?, ?, ?)""",
+            (user_id, section_id, speed_score, explanation_score, question_sharpness_score, evidence, now, now)
+        )
+    else:
+        db.execute(
+            """UPDATE section_progress SET status = 'completed', speed_score = ?, explanation_score = ?,
+               question_sharpness_score = ?, evidence = ?, completed_at = ?
+               WHERE user_id = ? AND section_id = ?""",
+            (speed_score, explanation_score, question_sharpness_score, evidence, now, user_id, section_id)
+        )
 
 
 def issue_credential_if_complete(user_id, course_id):
@@ -439,32 +473,75 @@ async def admin_override_section(user_id: int, section_id: int, req: AdminOverri
         return {"error": "Section not found"}
     course_id = section_row[0]
 
-    now = datetime.now(timezone.utc).isoformat()
-    existing = db.execute(
-        "SELECT started_at FROM section_progress WHERE user_id = ? AND section_id = ?", (user_id, section_id)
-    ).fetchone()
-
-    if existing is None:
-        db.execute(
-            """INSERT INTO section_progress (user_id, section_id, status, speed_score, explanation_score,
-               question_sharpness_score, evidence, started_at, completed_at)
-               VALUES (?, ?, 'completed', ?, ?, ?, ?, ?, ?)""",
-            (user_id, section_id, req.speed_score, req.explanation_score, req.question_sharpness_score,
-             req.evidence, now, now)
-        )
-    else:
-        db.execute(
-            """UPDATE section_progress SET status = 'completed', speed_score = ?, explanation_score = ?,
-               question_sharpness_score = ?, evidence = ?, completed_at = ?
-               WHERE user_id = ? AND section_id = ?""",
-            (req.speed_score, req.explanation_score, req.question_sharpness_score, req.evidence, now,
-             user_id, section_id)
-        )
+    apply_section_override(user_id, section_id, req.speed_score, req.explanation_score,
+                            req.question_sharpness_score, req.evidence)
     db.commit()
 
     credential_issued = issue_credential_if_complete(user_id, course_id)
 
     return {"completed": True, "credential_issued": credential_issued}
+
+@app.post("/api/admin/users/{user_id}/sections/bulk_override")
+async def admin_bulk_override_sections(user_id: int, req: AdminBulkOverrideRequest, authorization: str | None = Header(None)):
+    account = await get_account(authorization)
+    if account is None or account["account_type"] != "admin":
+        return {"error": "Not authenticated"}
+
+    if not req.section_ids:
+        return {"error": "No sections selected"}
+
+    user_row = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user_row is None:
+        return {"error": "User not found"}
+
+    course_ids = set()
+    for section_id in req.section_ids:
+        section_row = db.execute("SELECT course_id FROM sections WHERE id = ?", (section_id,)).fetchone()
+        if section_row is None:
+            return {"error": f"Section {section_id} not found"}
+        course_ids.add(section_row[0])
+
+    for section_id in req.section_ids:
+        apply_section_override(user_id, section_id, req.speed_score, req.explanation_score,
+                                req.question_sharpness_score, req.evidence)
+    db.commit()
+
+    credentials_issued = sum(1 for course_id in course_ids if issue_credential_if_complete(user_id, course_id))
+
+    return {"completed": len(req.section_ids), "credentials_issued": credentials_issued}
+
+@app.post("/api/admin/users/{user_id}/sections/bulk_revert")
+async def admin_bulk_revert_sections(user_id: int, req: AdminBulkRevertRequest, authorization: str | None = Header(None)):
+    account = await get_account(authorization)
+    if account is None or account["account_type"] != "admin":
+        return {"error": "Not authenticated"}
+
+    if not req.section_ids:
+        return {"error": "No sections selected"}
+
+    user_row = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user_row is None:
+        return {"error": "User not found"}
+
+    course_ids = set()
+    for section_id in req.section_ids:
+        section_row = db.execute("SELECT course_id FROM sections WHERE id = ?", (section_id,)).fetchone()
+        if section_row is None:
+            return {"error": f"Section {section_id} not found"}
+        course_ids.add(section_row[0])
+
+    for section_id in req.section_ids:
+        db.execute(
+            "DELETE FROM section_progress WHERE user_id = ? AND section_id = ?",
+            (user_id, section_id)
+        )
+    credentials_revoked = 0
+    for course_id in course_ids:
+        cur = db.execute("DELETE FROM credentials WHERE user_id = ? AND course_id = ?", (user_id, course_id))
+        credentials_revoked += cur.rowcount
+    db.commit()
+
+    return {"reverted": len(req.section_ids), "credentials_revoked": credentials_revoked}
 
 from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
