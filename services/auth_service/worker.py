@@ -9,6 +9,7 @@ worker.register("signup_user")(auth.signup_user)
 worker.register("login_user")(auth.login_user)
 worker.register("signup_employer")(auth.signup_employer)
 worker.register("login_employer")(auth.login_employer)
+worker.register("login_admin")(auth.login_admin)
 worker.register("get_account_from_token")(auth.get_account_from_token)
 
 if __name__ == "__main__":

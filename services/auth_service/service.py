@@ -84,6 +84,18 @@ def login_employer(email, password):
     return {"account_id": account_id, "account_type": "employer", "token": token}
 
 
+def login_admin(email, password):
+    db = _get_db()
+    row = db.execute("SELECT id, password_hash FROM admins WHERE email = ?", (email,)).fetchone()
+    if row is None:
+        raise ValueError("Invalid email or password")
+    account_id, password_hash = row
+    if not verify_password(password, password_hash):
+        raise ValueError("Invalid email or password")
+    token = _create_token(db, "admin", account_id)
+    return {"account_id": account_id, "account_type": "admin", "token": token}
+
+
 def _create_token(db, account_type, account_id):
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc).isoformat()
@@ -115,7 +127,7 @@ def get_account_from_token(token):
             "account_type": "user", "id": user[0], "email": user[1], "name": user[2],
             "education": user[3], "experience": user[4], "current_company": user[5], "certifications": user[6]
         }
-    else:
+    elif account_type == "employer":
         employer = db.execute(
             "SELECT id, email, company_name, contact_name FROM employers WHERE id = ?",
             (account_id,)
@@ -126,3 +138,13 @@ def get_account_from_token(token):
             "account_type": "employer", "id": employer[0], "email": employer[1],
             "company_name": employer[2], "contact_name": employer[3]
         }
+    elif account_type == "admin":
+        admin = db.execute(
+            "SELECT id, email, name FROM admins WHERE id = ?",
+            (account_id,)
+        ).fetchone()
+        if admin is None:
+            return None
+        return {"account_type": "admin", "id": admin[0], "email": admin[1], "name": admin[2]}
+    else:
+        return None

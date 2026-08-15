@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Talent Bridge — Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0f; color: #e8e8e8; font-family: -apple-system, sans-serif; }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  h2 { font-size: 20px; margin-bottom: 16px; }
+  h3 { font-size: 15px; margin-bottom: 8px; }
+  p.sub { color: #999; margin-bottom: 24px; font-size: 14px; }
+  .card { background: #1a1a1c; border: 1px solid #2e2e30; border-radius: 12px; padding: 20px; margin-bottom: 14px; }
+  .card.clickable { cursor: pointer; }
+  .card.clickable:hover { border-color: #4a4a4e; }
+  input { width: 100%; padding: 12px 14px; margin-bottom: 12px; background: #1a1a1c; border: 1px solid #2e2e30; border-radius: 8px; color: #e8e8e8; font-size: 14px; }
+  button.primary { padding: 12px 20px; background: #e8e8e8; color: #0d0d0f; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  button.primary:hover { background: #fff; }
+  .topnav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .topnav a { color: #999; font-size: 13px; cursor: pointer; margin-left: 16px; }
+  .back { color: #999; font-size: 13px; cursor: pointer; margin-bottom: 20px; display: inline-block; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; margin-right: 6px; }
+  .badge.completed, .badge.passed { background: #1e3a2f; color: #6fcf97; }
+  .badge.in_progress, .badge.verifying, .badge.provisioning { background: #3a2f1e; color: #e0b268; }
+  .badge.not_started, .badge.destroyed { background: #2a2a2c; color: #999; }
+  .badge.failed, .badge.error { background: #3a1e1e; color: #e07a5f; }
+  .stat-row { display: flex; gap: 18px; font-size: 13px; color: #999; margin-top: 6px; }
+  .err { color: #e07a5f; font-size: 13px; margin-bottom: 8px; }
+  details { border: 1px solid #2e2e30; border-radius: 10px; margin-bottom: 10px; }
+  details summary { padding: 14px 16px; cursor: pointer; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details summary::-webkit-details-marker { display: none; }
+  details[open] summary { border-bottom: 1px solid #2e2e30; }
+  .details-body { padding: 14px 16px; }
+  .msg { margin-bottom: 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .msg.user { background: #263340; }
+  .msg.assistant { background: #0d0d0f; }
+  .msg .role { color: #999; font-size: 11px; text-transform: uppercase; margin-bottom: 4px; display: block; }
+  .score-row { display: flex; gap: 16px; font-size: 12.5px; color: #999; margin-top: 8px; flex-wrap: wrap; }
+  .evidence { font-size: 12.5px; color: #ccc; margin-top: 8px; font-style: italic; }
+  pre.logs { background: #0d0d0f; border-radius: 8px; padding: 12px; font-size: 12px; white-space: pre-wrap; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+  .empty { color: #999; font-size: 13px; }
+  .profile-row { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: #999; margin-top: 6px; }
+  details.override { margin-top: 14px; font-size: 13px; }
+  details.override summary { padding: 10px 14px; color: #e0b268; }
+  details.override input { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+<script>
+const API = '';
+let state = { view: 'login', token: localStorage.getItem('tb_admin_token'), admin: null, users: [], currentUser: null };
+
+async function api(path, method='GET', body=null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : null });
+  return res.json();
+}
+
+function logout() {
+  localStorage.removeItem('tb_admin_token');
+  state = { view: 'login', token: null, admin: null, users: [], currentUser: null };
+  render();
+}
+
+function el(html) { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+
+async function nav(view) { state.view = view; await render(); }
+
+async function checkAuth() {
+  if (!state.token) return false;
+  const r = await api('/api/auth/me');
+  if (r.error || !r.account || r.account.account_type !== 'admin') { logout(); return false; }
+  state.admin = r.account;
+  return true;
+}
+
+async function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  let view;
+  if (state.view === 'login') view = renderLogin();
+  else if (state.view === 'users') view = await renderUsers();
+  else if (state.view === 'user_detail') view = await renderUserDetail();
+  if (view) app.appendChild(view);
+}
+
+function renderLogin() {
+  const c = el(`
+    <div>
+      <h1>Talent Bridge — Admin</h1>
+      <p class="sub">Monitor learner conversation history.</p>
+      <input id="email" placeholder="Admin email" />
+      <input id="password" type="password" placeholder="Password" />
+      <div class="err" id="err"></div>
+      <button class="primary" id="btn" style="width:100%">Log in</button>
+    </div>
+  `);
+  c.querySelector('#btn').onclick = async () => {
+    const email = c.querySelector('#email').value, password = c.querySelector('#password').value;
+    const r = await api('/api/auth/login/admin', 'POST', { email, password });
+    if (r.error) { c.querySelector('#err').textContent = r.error; return; }
+    state.token = r.token;
+    localStorage.setItem('tb_admin_token', r.token);
+    const ok = await checkAuth();
+    if (ok) nav('users');
+  };
+  return c;
+}
+
+async function renderUsers() {
+  const r = await api('/api/admin/users');
+  if (r.error) { logout(); return renderLogin(); }
+  state.users = r.users;
+  const c = el(`
+    <div>
+      <div class="topnav">
+        <h1 style="margin:0;font-size:22px">Learners</h1>
+        <div><span style="color:#999;font-size:13px">${state.admin.name}</span><a onclick="logout()">Log out</a></div>
+      </div>
+      <p class="sub">${state.users.length} learner${state.users.length === 1 ? '' : 's'}. Click one to see their module conversations.</p>
+      <div id="list"></div>
+    </div>
+  `);
+  const list = c.querySelector('#list');
+  if (state.users.length === 0) list.appendChild(el(`<p class="empty">No learners have signed up yet.</p>`));
+  state.users.forEach(u => {
+    const card = el(`
+      <div class="card clickable">
+        <h3>${u.name}</h3>
+        <p style="color:#999;font-size:13px">${u.email}${u.current_company ? ' · ' + u.current_company : ''}</p>
+        <div class="stat-row">
+          <span>${u.completed_sections} section${u.completed_sections === 1 ? '' : 's'} completed</span>
+          <span>${u.credentials_count} credential${u.credentials_count === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+    `);
+    card.onclick = () => { state.currentUser = u; nav('user_detail'); };
+    list.appendChild(card);
+  });
+  return c;
+}
+
+async function renderUserDetail() {
+  const r = await api(`/api/admin/users/${state.currentUser.id}`);
+  if (r.error) { return el(`<div><a class="back" onclick="nav('users')">← Learners</a><p class="err">${r.error}</p></div>`); }
+  const { user, courses } = r;
+
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('users')">← Learners</a>
+      <h1 style="font-size:22px">${user.name}</h1>
+      <div class="profile-row">
+        <span>${user.email}</span>
+        <span>${user.current_company || 'No current company listed'}</span>
+        <span>${user.education || 'No education listed'}</span>
+        <span>${user.experience || 'No experience listed'}</span>
+      </div>
+
+      <h2 style="margin-top:28px">Module conversation history</h2>
+      <div id="courses"></div>
+    </div>
+  `);
+
+  const coursesEl = c.querySelector('#courses');
+  if (courses.length === 0) coursesEl.appendChild(el(`<p class="empty">No courses exist yet.</p>`));
+  courses.forEach(course => {
+    const courseBlock = el(`<div style="margin-bottom:20px"><h3>${course.title}</h3></div>`);
+    if (course.sections.length === 0) {
+      courseBlock.appendChild(el(`<p class="empty">No sections in this course.</p>`));
+    }
+    course.sections.forEach(s => {
+      const summary = `
+        <span>${s.section_number} — ${s.title}</span>
+        <span class="badge ${s.status}">${s.status.replace('_', ' ')}</span>
+      `;
+      const scoreRow = s.status === 'completed' ? `
+        <div class="score-row">
+          <span>Speed: ${s.speed_score ?? '—'}</span>
+          <span>Explanation: ${s.explanation_score ?? '—'}</span>
+          <span>Question sharpness: ${s.question_sharpness_score ?? '—'}</span>
+        </div>
+        ${s.evidence ? `<div class="evidence">"${s.evidence}"</div>` : ''}
+      ` : '';
+      const convoHtml = s.conversation.length === 0
+        ? `<p class="empty">No conversation yet.</p>`
+        : s.conversation.map(m => `<div class="msg ${m.role}"><span class="role">${m.role}</span>${m.content.replace(/</g, '&lt;').replace(/\n/g, '<br>')}</div>`).join('');
+      const detail = el(`
+        <details>
+          <summary>${summary}</summary>
+          <div class="details-body">
+            ${scoreRow}
+            <div style="margin-top:12px">${convoHtml}</div>
+            <details class="override">
+              <summary>${s.status === 'completed' ? 'Override scores' : 'Mark complete (override)'}</summary>
+              <div class="details-body">
+                <input class="ov-speed" type="number" step="0.1" placeholder="Speed score" value="${s.speed_score ?? ''}" />
+                <input class="ov-explanation" type="number" step="0.1" placeholder="Explanation score" value="${s.explanation_score ?? ''}" />
+                <input class="ov-sharpness" type="number" step="0.1" placeholder="Question sharpness score" value="${s.question_sharpness_score ?? ''}" />
+                <input class="ov-evidence" type="text" placeholder="Evidence / note" value="${s.evidence ? s.evidence.replace(/"/g, '&quot;') : ''}" />
+                <div class="err ov-err"></div>
+                <button class="primary ov-submit">Save override</button>
+              </div>
+            </details>
+          </div>
+        </details>
+      `);
+      detail.querySelector('.ov-submit').onclick = async (ev) => {
+        ev.preventDefault();
+        const errEl = detail.querySelector('.ov-err');
+        const speed = parseFloat(detail.querySelector('.ov-speed').value);
+        const explanation = parseFloat(detail.querySelector('.ov-explanation').value);
+        const sharpness = parseFloat(detail.querySelector('.ov-sharpness').value);
+        if ([speed, explanation, sharpness].some(v => Number.isNaN(v))) {
+          errEl.textContent = 'Speed, explanation, and question sharpness scores are required.';
+          return;
+        }
+        const evidence = detail.querySelector('.ov-evidence').value || undefined;
+        const body = { speed_score: speed, explanation_score: explanation, question_sharpness_score: sharpness };
+        if (evidence !== undefined) body.evidence = evidence;
+        const r = await api(`/api/admin/users/${state.currentUser.id}/sections/${s.id}/override`, 'POST', body);
+        if (r.error) { errEl.textContent = r.error; return; }
+        await nav('user_detail');
+      };
+      courseBlock.appendChild(detail);
+    });
+    coursesEl.appendChild(courseBlock);
+  });
+
+  return c;
+}
+
+(async function init() {
+  if (state.token) {
+    const ok = await checkAuth();
+    if (ok) { nav('users'); return; }
+  }
+  render();
+})();
+</script>
+</body>
+</html>

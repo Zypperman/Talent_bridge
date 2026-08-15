@@ -52,6 +52,13 @@ class CompleteSectionRequest(BaseModel):
     section_id: int
 
 
+class AdminOverrideSectionRequest(BaseModel):
+    speed_score: float
+    explanation_score: float
+    question_sharpness_score: float
+    evidence: str = "Manually overridden by admin."
+
+
 class JobPostingRequest(BaseModel):
     title: str
     description: str
@@ -82,6 +89,33 @@ def save_message(user_id, section_id, role, content):
         (user_id, section_id, role, content, datetime.now(timezone.utc).isoformat())
     )
     db.commit()
+
+
+def issue_credential_if_complete(user_id, course_id):
+    total_sections = db.execute("SELECT COUNT(*) FROM sections WHERE course_id = ?", (course_id,)).fetchone()[0]
+    completed_sections = db.execute(
+        """SELECT COUNT(*) FROM section_progress sp JOIN sections s ON sp.section_id = s.id
+           WHERE sp.user_id = ? AND s.course_id = ? AND sp.status = 'completed'""",
+        (user_id, course_id)
+    ).fetchone()[0]
+
+    if completed_sections < total_sections:
+        return False
+
+    existing_cred = db.execute(
+        "SELECT id FROM credentials WHERE user_id = ? AND course_id = ?", (user_id, course_id)
+    ).fetchone()
+    if existing_cred is not None:
+        return False
+
+    db.execute(
+        "INSERT INTO credentials (user_id, course_id, issued_at) VALUES (?, ?, ?)",
+        (user_id, course_id, datetime.now(timezone.utc).isoformat())
+    )
+    db.commit()
+    return True
+
+
 @app.post("/api/auth/signup/user")
 async def signup_user(req: UserSignupRequest):
     try:
@@ -113,6 +147,15 @@ async def signup_employer(req: EmployerSignupRequest):
 async def login_employer(req: LoginRequest):
     try:
         return await auth_client.call("login_employer", req.model_dump())
+    except ServiceError as e:
+        return {"error": str(e)}
+    except ServiceUnavailableError:
+        return {"error": "Auth service is unavailable, please try again"}
+
+@app.post("/api/auth/login/admin")
+async def login_admin(req: LoginRequest):
+    try:
+        return await auth_client.call("login_admin", req.model_dump())
     except ServiceError as e:
         return {"error": str(e)}
     except ServiceUnavailableError:
@@ -236,25 +279,7 @@ async def complete_section(req: CompleteSectionRequest, authorization: str | Non
     )
     db.commit()
 
-    total_sections = db.execute("SELECT COUNT(*) FROM sections WHERE course_id = ?", (course_id,)).fetchone()[0]
-    completed_sections = db.execute(
-        """SELECT COUNT(*) FROM section_progress sp JOIN sections s ON sp.section_id = s.id
-           WHERE sp.user_id = ? AND s.course_id = ? AND sp.status = 'completed'""",
-        (account["id"], course_id)
-    ).fetchone()[0]
-
-    credential_issued = False
-    if completed_sections >= total_sections:
-        existing_cred = db.execute(
-            "SELECT id FROM credentials WHERE user_id = ? AND course_id = ?", (account["id"], course_id)
-        ).fetchone()
-        if existing_cred is None:
-            db.execute(
-                "INSERT INTO credentials (user_id, course_id, issued_at) VALUES (?, ?, ?)",
-                (account["id"], course_id, datetime.now(timezone.utc).isoformat())
-            )
-            db.commit()
-            credential_issued = True
+    credential_issued = issue_credential_if_complete(account["id"], course_id)
 
     return {"completed": True, "credential_issued": credential_issued}
 
@@ -334,6 +359,112 @@ async def list_jobs(authorization: str | None = Header(None)):
         })
 
     return {"jobs": jobs}
+
+@app.get("/api/admin/users")
+async def admin_list_users(authorization: str | None = Header(None)):
+    account = await get_account(authorization)
+    if account is None or account["account_type"] != "admin":
+        return {"error": "Not authenticated"}
+
+    rows = db.execute("SELECT id, name, email, current_company FROM users ORDER BY name").fetchall()
+    users = []
+    for uid, name, email, company in rows:
+        completed_sections = db.execute(
+            "SELECT COUNT(*) FROM section_progress WHERE user_id = ? AND status = 'completed'", (uid,)
+        ).fetchone()[0]
+        credentials_count = db.execute(
+            "SELECT COUNT(*) FROM credentials WHERE user_id = ?", (uid,)
+        ).fetchone()[0]
+        users.append({
+            "id": uid, "name": name, "email": email, "current_company": company,
+            "completed_sections": completed_sections, "credentials_count": credentials_count
+        })
+    return {"users": users}
+
+@app.get("/api/admin/users/{user_id}")
+async def admin_get_user(user_id: int, authorization: str | None = Header(None)):
+    account = await get_account(authorization)
+    if account is None or account["account_type"] != "admin":
+        return {"error": "Not authenticated"}
+
+    user_row = db.execute(
+        "SELECT id, name, email, education, experience, current_company, certifications FROM users WHERE id = ?",
+        (user_id,)
+    ).fetchone()
+    if user_row is None:
+        return {"error": "User not found"}
+    user = {
+        "id": user_row[0], "name": user_row[1], "email": user_row[2], "education": user_row[3],
+        "experience": user_row[4], "current_company": user_row[5], "certifications": user_row[6]
+    }
+
+    courses = []
+    for course_id, course_title in db.execute("SELECT id, title FROM courses ORDER BY display_order").fetchall():
+        sections = []
+        for sid, num, title in db.execute(
+            "SELECT id, section_number, title FROM sections WHERE course_id = ? ORDER BY display_order", (course_id,)
+        ).fetchall():
+            prog = db.execute(
+                """SELECT status, speed_score, explanation_score, question_sharpness_score, evidence, started_at, completed_at
+                   FROM section_progress WHERE user_id = ? AND section_id = ?""",
+                (user_id, sid)
+            ).fetchone()
+            sections.append({
+                "id": sid, "section_number": num, "title": title,
+                "status": prog[0] if prog else "not_started",
+                "speed_score": prog[1] if prog else None,
+                "explanation_score": prog[2] if prog else None,
+                "question_sharpness_score": prog[3] if prog else None,
+                "evidence": prog[4] if prog else None,
+                "started_at": prog[5] if prog else None,
+                "completed_at": prog[6] if prog else None,
+                "conversation": get_conversation(user_id, sid)
+            })
+        courses.append({"id": course_id, "title": course_title, "sections": sections})
+
+    return {"user": user, "courses": courses}
+
+@app.post("/api/admin/users/{user_id}/sections/{section_id}/override")
+async def admin_override_section(user_id: int, section_id: int, req: AdminOverrideSectionRequest, authorization: str | None = Header(None)):
+    account = await get_account(authorization)
+    if account is None or account["account_type"] != "admin":
+        return {"error": "Not authenticated"}
+
+    user_row = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user_row is None:
+        return {"error": "User not found"}
+
+    section_row = db.execute("SELECT course_id FROM sections WHERE id = ?", (section_id,)).fetchone()
+    if section_row is None:
+        return {"error": "Section not found"}
+    course_id = section_row[0]
+
+    now = datetime.now(timezone.utc).isoformat()
+    existing = db.execute(
+        "SELECT started_at FROM section_progress WHERE user_id = ? AND section_id = ?", (user_id, section_id)
+    ).fetchone()
+
+    if existing is None:
+        db.execute(
+            """INSERT INTO section_progress (user_id, section_id, status, speed_score, explanation_score,
+               question_sharpness_score, evidence, started_at, completed_at)
+               VALUES (?, ?, 'completed', ?, ?, ?, ?, ?, ?)""",
+            (user_id, section_id, req.speed_score, req.explanation_score, req.question_sharpness_score,
+             req.evidence, now, now)
+        )
+    else:
+        db.execute(
+            """UPDATE section_progress SET status = 'completed', speed_score = ?, explanation_score = ?,
+               question_sharpness_score = ?, evidence = ?, completed_at = ?
+               WHERE user_id = ? AND section_id = ?""",
+            (req.speed_score, req.explanation_score, req.question_sharpness_score, req.evidence, now,
+             user_id, section_id)
+        )
+    db.commit()
+
+    credential_issued = issue_credential_if_complete(user_id, course_id)
+
+    return {"completed": True, "credential_issued": credential_issued}
 
 from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

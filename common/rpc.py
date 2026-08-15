@@ -7,6 +7,7 @@ per-call reply key that the client BLPOPs.
 
 import json
 import os
+import time
 import uuid
 
 import redis
@@ -39,7 +40,21 @@ class RPCClient:
         message = json.dumps({"action": action, "payload": payload or {}, "reply_to": reply_key})
         await self._redis.lpush(self._queue, message)
 
-        popped = await self._redis.blpop(reply_key, timeout=self._timeout)
+        # A single long BLPOP can have redis-py's own socket-level read timeout
+        # race against the command's `timeout` argument and raise a spurious
+        # TimeoutError partway through — same underlying quirk as RPCWorker.run.
+        # Loop short blocks instead so a spurious timeout just means "keep waiting".
+        deadline = time.monotonic() + self._timeout
+        popped = None
+        while time.monotonic() < deadline:
+            block_for = max(1, min(5, int(deadline - time.monotonic())))
+            try:
+                popped = await self._redis.blpop(reply_key, timeout=block_for)
+            except redis.exceptions.TimeoutError:
+                continue
+            if popped is not None:
+                break
+
         if popped is None:
             raise ServiceUnavailableError(
                 f"{self._service_name} service timed out handling '{action}'"

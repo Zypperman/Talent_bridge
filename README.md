@@ -27,6 +27,11 @@ Course content itself is AI-drafted and then human-reviewed for technical accura
 - Credential issuance on full course completion
 - Employer dashboard: browse candidates with their credentials and scores
 - Job postings with automatic matching against required course credentials
+- Admin console for monitoring every learner's module conversation history
+
+### Not implemented: incident-simulation sandbox
+
+An earlier design ([docs/Sandbox_Architecture.md](docs/Sandbox_Architecture.md)) scaffolded a sandbox service that would provision per-learner mock data-center environments (Kubernetes + Terraform-injected faults) for hands-on incident exercises. That implementation has been removed. A convincing simulation turns out to require the real vendor software — most storage/network platforms have no public simulator, and generated-fake CLI output doesn't survive scrutiny from anyone who knows the real tool — which means enterprise accounts and vendor collaboration, not more engineering time. See [docs/no-sim-justification.md](docs/no-sim-justification.md) for the full reasoning. The architecture doc is kept as a reference for a future revival that starts with vendor partnerships.
 
 ## Tech stack
 
@@ -64,13 +69,16 @@ Talent_bridge/
 ├── common/
 │   └── rpc.py                 # Shared Redis request/reply RPC client (gateway) + worker loop (services)
 ├── generate_courses.py       # One-off script: AI-drafts course sections and seeds the DB
+├── create_admin.py           # One-off script: creates an admin account (no public signup endpoint)
 ├── static/
-│   └── index.html            # Frontend (single page, no build tools)
+│   ├── index.html            # Learner/employer frontend (single page, no build tools)
+│   └── admin.html            # Admin console: per-learner conversation history
 ├── schema.sql                 # SQLite table definitions (idempotent, applied automatically by the gateway container)
 ├── docker-compose.yml          # Orchestrates redis, auth-service, teaching-service, gateway
 ├── requirements.txt            # Convenience "everything" file for running components without Docker
 ├── setup.sh / setup.ps1        # One-shot local setup and run via Docker Compose (bash / PowerShell)
-└── docs/                     # Product requirements, architecture notes, pitch materials
+└── docs/                     # Product requirements, architecture notes, pitch materials — including
+                               # Sandbox_Architecture.md and no-sim-justification.md for the removed sandbox feature
 ```
 
 ## Setup
@@ -102,9 +110,19 @@ docker compose run --rm teaching-service python generate_courses.py
 
 Every service reads `TALENTBRIDGE_DB_PATH` (set to `/data/talentbridge.db` inside the containers via `docker-compose.yml`) and `REDIS_URL` (set to `redis://redis:6379/0`) from the environment.
 
+### Admin console
+
+There's no public signup for admin accounts — the console shows every learner's private conversation transcripts, so admins are provisioned out-of-band with `create_admin.py` rather than through the API:
+
+```bash
+docker compose run --rm auth-service python create_admin.py you@example.com yourpassword "Your Name"
+```
+
+Then log in at `http://127.0.0.1:8000/admin.html`. The console lists every learner and, per learner, their full section-by-section conversation history (with scores/evidence).
+
 ### Manual setup (without Docker)
 
-Each piece can also run locally as a plain Python process — useful for quick iteration on one service. You'll need a local Redis instance (`redis-server`, or `docker run -p 6379:6379 redis:7-alpine`) and to run the gateway plus both services in separate terminals:
+Each piece can also run locally as a plain Python process — useful for quick iteration on one service. You'll need a local Redis instance (`redis-server`, or `docker run -p 6379:6379 redis:7-alpine`) and to run the gateway plus each service in separate terminals:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\Activate.ps1 on Windows
@@ -151,6 +169,7 @@ The deck's content plan (slide-by-slide outline the deck is built from) lives at
 | --- | --- |
 | `POST /api/auth/signup/user` / `login/user` | Learner signup and login |
 | `POST /api/auth/signup/employer` / `login/employer` | Employer signup and login |
+| `POST /api/auth/login/admin` | Admin login (no public signup — see [Admin console](#admin-console)) |
 | `GET /api/auth/me` | Current authenticated account |
 | `GET /api/courses` | List all courses |
 | `GET /api/courses/{course_id}/sections` | List a course's sections with progress status |
@@ -160,6 +179,8 @@ The deck's content plan (slide-by-slide outline the deck is built from) lives at
 | `GET /api/my/credentials` | Learner's earned credentials |
 | `GET /api/employer/candidates` | Employer view of all candidates, credentials, and scores |
 | `POST /api/employer/jobs` / `GET /api/employer/jobs` | Create and list job postings with matched candidates |
+| `GET /api/admin/users` | Admin: list all learners with progress/credential summary counts |
+| `GET /api/admin/users/{user_id}` | Admin: full detail — profile, per-section conversation history and scores |
 
 ## License
 

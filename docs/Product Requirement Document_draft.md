@@ -63,7 +63,7 @@ Grounded in the current repo state (`main.py`, `schema.sql`, `services/`), not j
 **Not started / out of MVP scope:**
 
 - MC as a first-class entity with a `depth_score` and competency decay (Solution 1) — today, evaluation scores live per-section (`section_progress.speed_score` etc.), not aggregated per concept/skill with decay applied.
-- Sandbox scenario simulation (Solution 3) — see the companion doc [Sandbox_Architecture.md](Sandbox_Architecture.md) for the proposed (not yet built) architecture.
+- Sandbox scenario simulation (Solution 3) — **cut, not just deferred.** The mock-fidelity spike this section calls for below concluded that a convincing simulation needs the real vendor software (enterprise accounts, vendor-provisioned training licenses), which isn't obtainable through more engineering time. See [no-sim-justification.md](no-sim-justification.md) for the research and the companion doc [Sandbox_Architecture.md](Sandbox_Architecture.md), now kept only as a design reference, for the architecture that was scaffolded and then removed.
 - Live LinkedIn job scraping — `generate_courses.py` seeds a fixed list of 3 hardcoded course topics, not a per-user job-description input.
 - Horizontal scaling / distributed infrastructure — single SQLite file, single process today. A microservices split (`services/*/worker.py`, `common/rpc.py` Redis-backed RPC, `gateway/`) is in progress but not wired into `main.py` yet — the live app still imports `auth_service`/`teaching_service` as local modules, not over the queue. Formal legal PDPA sign-off on recruiter-visible data also remains outstanding (currently an internal assumption, not a verified conclusion).
 
@@ -85,7 +85,7 @@ Each decision below is settled; the rationale tells you whether it's load-bearin
 
 | Question | What to do about it |
 | :---- | :---- |
-| How do we realistically simulate data-center infrastructure failures (storage array down, latency spikes, connectivity loss) for Solution 3? Which components need to be mocked, and how is a per-scenario configuration authored? | Do not commit engineering time to K8s/Terraform sandbox build-out until a small spike proves at least one failure scenario can be mocked convincingly. Treat Solution 3 as exploratory/post-MVP until then. |
+| How do we realistically simulate data-center infrastructure failures (storage array down, latency spikes, connectivity loss) for Solution 3? Which components need to be mocked, and how is a per-scenario configuration authored? | **Resolved, negatively.** The spike (see [no-sim-justification.md](no-sim-justification.md)) found that credible simulation requires the actual vendor software — most storage/network platforms have no public simulator at all, and the ones that exist (e.g. NetApp's ONTAP simulator) still require a vendor support account. Generated/replayed fake output doesn't hold up to anyone who knows the real tool. Per the escalation rule this question set up ([§11](#11-escalation-rules)), Solution 3 has been cut and its scaffolded implementation removed from the codebase. |
 | What is the exact formula that combines the three evaluated dimensions (speed, explanation quality, question sharpness) into the single 0–10 depth score? | Needs to be specified before depth score can be implemented consistently. Flag to product/eng owner; don't guess a weighting without sign-off. |
 | Is the "no PDPA concerns" claim for recruiter-visible skill tracing actually correct under Indonesian law, or is it an untested assumption? | Get a legal read before recruiter-facing tracing ships broadly. Until confirmed, treat as an assumption, not a decision. |
 | What does the human-review/appeal path for disputed AI evaluations look like? (Slide summary notes: "a production version would add" this — it doesn't exist yet.) | Out of MVP scope; design when evaluation disputes become a real, observed problem rather than speculatively now. |
@@ -118,7 +118,9 @@ Each decision below is settled; the rationale tells you whether it's load-bearin
 - Summary pointers let the user review their own performance, and let recruiters see whether the user is a good fit and on-track with a job's requirements — giving both the company and the user visibility into progress.
 - **AI drafts course content; a human domain expert reviews and validates every course for technical accuracy before it reaches a learner** (see [Decision 5](#4-decisions-already-made)).
 
-### Solution 3: Sandbox-based Scenario Setup for Incident Simulation *(exploratory — see [Open Questions](#5-open-questions))*
+### Solution 3: Sandbox-based Scenario Setup for Incident Simulation *(cut — see [Open Questions](#5-open-questions))*
+
+The description below is kept for historical/design reference; the mock-fidelity spike concluded this can't be built convincingly without vendor-provisioned software, so it's no longer planned work.
 
 - Users select incident exercises modeled on real data-center scenarios — e.g., a server becoming unavailable, or an application facing unprecedented latency.
 - Users access a cloud workspace via a resource-link URL; this workspace is a sandbox mocking data-center functions/components, aiming to mimic the scenario as realistically as possible.
@@ -217,7 +219,7 @@ MatchResult {
 - **No opaque scoring.** Every evaluation surfaced to a learner or recruiter must trace back to quoted evidence from the actual conversation — this is both a trust mechanism and the current answer to privacy objections ([Decision 2](#4-decisions-already-made)).
 - **Matching must remain rule-based on verified prerequisites**, not a ranking/relevance model — this is explicitly called out in the prepared Q&A as a differentiator, not an implementation detail to optimize away.
 - **PDPA exposure is an unverified assumption, not a cleared constraint** — see [Open Questions](#5-open-questions). Do not expand recruiter-visible data fields without re-checking this.
-- **Solution 3 has no committed technical approach.** K8s/Terraform is the current best guess for the sandbox, but the harder problem (what to mock, how to make it realistic) is unsolved — don't treat the infra choice as validating the feature's feasibility.
+- **Solution 3 is cut, not deferred.** The harder problem (what to mock, how to make it realistic) turned out to be unsolvable without vendor-provisioned software — see [Open Questions](#5-open-questions). Don't restart K8s/Terraform sandbox work without first lining up vendor access.
 
 ## 11. Escalation Rules
 
@@ -225,7 +227,7 @@ When to stop and get a decision from the product owner rather than assuming an a
 
 - If a scoring or decay formula changes in a way that would retroactively alter already-issued credentials — stop. Issued credentials are the trust artifact this product sells; silently reshaping their meaning after the fact undermines the core pitch.
 - If the PDPA legal review ([Open Questions](#5-open-questions)) comes back negative — stop expanding recruiter-facing tracing fields immediately and roll back to the minimum needed, rather than continuing to build on an unconfirmed assumption.
-- If the Solution 3 mock-fidelity spike ([Sandbox_Architecture.md §9](Sandbox_Architecture.md#9-open-questions)) shows a scenario can't be simulated convincingly in the available time — stop and flag it; cut the feature from the pitch rather than demoing something unconvincing.
+- If the Solution 3 mock-fidelity spike ([Sandbox_Architecture.md §9](Sandbox_Architecture.md#9-open-questions)) shows a scenario can't be simulated convincingly in the available time — stop and flag it; cut the feature from the pitch rather than demoing something unconvincing. **This happened** — see [Open Questions](#5-open-questions) and [no-sim-justification.md](no-sim-justification.md); the sandbox implementation has been removed.
 - If a human course reviewer rejects or substantially rewrites an AI-drafted course more than occasionally — stop and flag it to the product owner. That's a signal the drafting prompt needs redesign, not something to quietly patch course-by-course.
 - Before implementing section-gating enforcement (currently missing — see [Scope Boundaries](#3-scope-boundaries-mvp-vs-future)) — stop and confirm the exact prerequisite rule. "Cannot skip ahead" doesn't say whether *all* prior sections must be complete or just the immediately preceding one; don't guess the semantics and wire up auth checks against it.
 - Do not silently drop a load-bearing decision from [section 4](#4-decisions-already-made) to hit a deadline. If it can't be met in time, that's an escalation, not a scope call to make unilaterally.
@@ -240,7 +242,7 @@ Build order matters because several pieces have hard dependencies, and because t
 4. Employer job posting + exact-match candidate matching — **done**, depends on (3) needing credentials to match against.
 5. Section-gating enforcement at the API level — **not done**; no new dependency, but must be resolved before [Decision 4](#4-decisions-already-made) ("cannot skip ahead") is true end-to-end rather than just an authoring intent.
 6. MC entity with `depth_score` + competency decay (Solution 1) — **not started**; depends on (2)'s evaluation output being reshaped into a per-concept score rather than per-section, so resolve whether "concept" maps 1:1 to "section" or spans several before building this.
-7. Sandbox (Solution 3) — **not started**, exploratory. Do not sequence this before (5) and (6) — it's the least-validated of the three solutions and shouldn't compete with core-loop polish for time.
+7. Sandbox (Solution 3) — **cut**, not sequenced. The mock-fidelity spike concluded a convincing simulation needs vendor-provisioned software/accounts, not more engineering time — see [Open Questions](#5-open-questions). Revival would start with vendor partnerships, not a rebuild of the removed implementation.
 8. Microservices split (`gateway/`, Redis RPC via `common/rpc.py`, `services/*/worker.py`) — **in progress**, not wired into `main.py` yet. Treat as infrastructure hardening that can happen any time after (2)–(4) are stable — it changes deployment shape, not product behavior.
 
 ## 13. Verification Loop

@@ -1,5 +1,15 @@
 # Sandbox Solution — Cloud Architecture
 
+> **Status: not implemented.** The scaffolded implementation this document originally described (`services/sandbox_service`, the `charts/scenario-base` Helm chart, the `terraform/` modules) has been removed from the codebase. This document is kept as a design reference only, and as a record of why the feature was cut.
+>
+> The plan below assumes mock components — a `mock-iscsi-target` container standing in for a real storage array, a `mock-app-server` for a real app tier — can be built cheaply and still teach real troubleshooting instincts. That assumption didn't survive contact with the actual problem (see §9's "Mock fidelity" open question, which flagged this risk from the start). Storage/network vendor software isn't something you can stub convincingly:
+>
+> - Most enterprise platforms have no public simulator at all (e.g. Dell PowerMax — no downloadable array simulator; realistic access requires a Dell Demo Center account or a real array's SYMAPI database).
+> - Where a real simulator exists (e.g. NetApp's ONTAP Simulator / "vsim"), it still requires a vendor support account and per-provider setup — i.e. collaboration with each software provider to provision training licenses, not something buildable unilaterally.
+> - Recorded-replay fixtures or LLM-generated CLI output can look plausible but get column widths, edge cases, and failure modes subtly wrong — output that a real storage/network operator would immediately clock as fake, which undermines the exact "prove real understanding" premise this platform is built on.
+>
+> Full reasoning and the researched per-vendor options: [no-sim-justification.md](no-sim-justification.md). A future revival of this feature should start with vendor partnerships/training-account access, not another mock-container spike.
+
 Companion to Solution 3 in the [Product Requirement Document](Product%20Requirement%20Document_draft.md). This document proposes an architecture for the incident-simulation sandbox — covering a local implementation (fast to build, good for the hackathon demo) and a GCP implementation (what it looks like once this needs to run for real, multi-tenant users).
 
 ## 1. Recap: what the sandbox has to do
