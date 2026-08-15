@@ -186,8 +186,15 @@ exploratory (see Slide 23).
 - Cloud workspace via K8s, incident triggered via Terraform configuration
 - Learner troubleshoots to restore functionality, then runs a test suite to
   confirm
-- **Unresolved:** which components need to be mocked, and how, to be realistic —
-  not MVP-committed work
+- **The hard part:** most storage/network vendor platforms have no public
+  simulator at all (e.g. Dell PowerMax) or require a vendor support account
+  (e.g. NetApp's ONTAP Simulator) — credible mocking needs partnerships with
+  each software provider to provision training licenses/accounts, not just
+  more engineering time (see [no-sim-justification.md](no-sim-justification.md))
+- Recorded/replayed or AI-generated fake output looks plausible but gets
+  subtle details (column widths, edge cases, failure modes) wrong — a real
+  operator clocks it immediately, which undermines the "prove real
+  understanding" premise
 
 ## Slide 19 — Employer Matching
 
@@ -242,14 +249,41 @@ hardcoded SDK dependency.
   sharpness into one 0–10 depth score? *(needs product/eng sign-off)*
 - Is the "no PDPA concerns" claim for recruiter-visible tracing actually correct
   under Indonesian law? *(needs legal read before broad rollout)*
-- How do we realistically simulate data-center failures for Solution 3, and what
-  needs to be mocked?
+- Sandbox realism is resolved as a vendor-partnership problem, not an
+  engineering one — who owns outreach to NetApp/Dell/etc. for training-account
+  access? *(see Slide 24)*
 - What does a human-review/appeal path for disputed AI evaluations look like?
   *(post-MVP)*
 - How will live LinkedIn job scraping work — rate limits, ToS, freshness?
   *(post-MVP)*
 
-## Slide 24 — Closing
+## Slide 24 — Roadmap: Near-Term (Post-MVP)
+
+- **Section-gating enforcement** — lock section access server-side, not just
+  track status (closes the current implementation gap)
+- **Human review/appeal workflow** — a recorded, checkable approval gate for
+  AI-drafted courses, and a path to contest a disputed evaluation
+- **Live LinkedIn job scraping** — replace the MVP's hand-picked sample job
+  description with a real, per-user job feed
+- **Bahasa Indonesia support** — lower the barrier for Batam's SMA/SMK-majority
+  workforce, most of whom aren't native English speakers
+- **Formal PDPA legal sign-off** on recruiter-visible skill tracing
+
+## Slide 25 — Roadmap: Further Out
+
+- **Voice-to-text conversation** — talk through an explanation instead of
+  typing it; more natural Socratic dialogue, lower barrier for learners less
+  comfortable writing long answers
+- **Sandbox incident simulation, revived** — once vendor partnerships (NetApp,
+  Dell, etc.) provide real training-account access (see Slide 18)
+- **Employer analytics dashboard** — skill-gap visibility across an entire
+  talent pool, not just per-candidate matching
+- **Beyond Batam / data centers** — the course → gated section → evidence-based
+  credential mechanism is built to generalize to other regions and industries
+- **Government program integration** — e.g. Kartu Prakerja, SkillsFuture/TeSA —
+  as a verified-competency layer on top of existing subsidized training
+
+## Slide 26 — Closing
 
 "This isn't about replacing human trainers. It's about giving Batam's workforce a
 fast, honest way to prove they're ready for these new roles — and giving

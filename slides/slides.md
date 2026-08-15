@@ -260,8 +260,13 @@ not a timed abstract puzzle — though this piece is still exploratory.
   configuration
 - Learner troubleshoots, then a test suite confirms the exercise is
   complete
-- **Unresolved:** which components need to be mocked, and how, to be
-  realistic — not MVP-committed work
+- **The hard part:** most storage/network vendor platforms have no public
+  simulator (e.g. Dell PowerMax) or require a vendor support account
+  (e.g. NetApp's ONTAP Simulator) — credible mocking needs partnerships
+  with each software provider to provision training licenses/accounts,
+  not just more engineering time
+- Recorded/replayed or AI-generated fake output looks plausible but gets
+  subtle details wrong — undermines the "prove real understanding" premise
 
 ---
 
@@ -300,7 +305,6 @@ matched, regardless of resume strength.
 | AI Engine | Claude, via OpenRouter | Socratic teaching, evaluation, course drafting |
 | Database | SQLite | One file, no separate server, reliable at this scale |
 | Frontend | Plain HTML/CSS/JS | Nothing to break live in a demo |
-| Hosting | Self-managed Linux, systemd | Runs permanently, auto-restarts |
 
 Direct model calls to Claude via OpenRouter, not a heavier agent framework —
 precise control over teaching/evaluation prompts without unnecessary
@@ -326,11 +330,46 @@ hardcoded SDK dependency.
   sharpness into one 0–10 depth score?
 - Is the "no PDPA concerns" claim for recruiter-visible tracing actually
   correct under Indonesian law?
-- How do we realistically simulate data-center failures for Solution 3?
+- Sandbox realism is a vendor-partnership problem, not an engineering one
+  — who owns outreach to NetApp/Dell/etc. for training-account access?
+  *(see Roadmap)*
 - What does a human-review/appeal path for disputed AI evaluations look
   like? *(post-MVP)*
 - How will live LinkedIn job scraping work — rate limits, ToS, freshness?
   *(post-MVP)*
+
+---
+
+## Roadmap: Near-Term (Post-MVP)
+
+- **Section-gating enforcement** — lock section access server-side, not
+  just track status (closes the current implementation gap)
+- **Human review/appeal workflow** — a recorded, checkable approval gate
+  for AI-drafted courses, and a path to contest a disputed evaluation
+- **Live LinkedIn job scraping** — replace the MVP's hand-picked sample
+  job description with a real, per-user job feed
+- **Bahasa Indonesia support** — lower the barrier for Batam's
+  SMA/SMK-majority workforce, most of whom aren't native English speakers
+- **Formal PDPA legal sign-off** on recruiter-visible skill tracing
+
+---
+
+## Roadmap: Further Out
+
+- **Voice-to-text conversation** — talk through an explanation instead of
+  typing it; more natural Socratic dialogue, lower barrier for learners
+  less comfortable writing long answers
+- **Sandbox incident simulation, revived** — once vendor partnerships
+  (NetApp, Dell, etc.) provide real training-account access (see
+  *Inside the Sandbox*)
+- **Employer analytics dashboard** — skill-gap visibility across an
+  entire talent pool, not just per-candidate matching
+- **Beyond Batam / data centers** — the course → gated section →
+  evidence-based credential mechanism is built to generalize to other
+  regions and industries
+- **Government program integration** — e.g. Kartu Prakerja,
+  SkillsFuture/TeSA — as a verified-competency layer on top of existing
+  subsidized training
 
 ---
 
