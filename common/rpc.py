@@ -68,7 +68,12 @@ class RPCWorker:
     def run(self):
         print(f"[{self._queue}] worker listening...", flush=True)
         while True:
-            item = self._redis.brpop(self._queue, timeout=0)
+            try:
+                item = self._redis.brpop(self._queue, timeout=5)
+            except redis.exceptions.TimeoutError:
+                # redis-py's own socket timeout can fire around a long block even
+                # though Redis itself hasn't timed out yet — harmless, just retry.
+                continue
             if item is None:
                 continue
             self._handle(item[1])

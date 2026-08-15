@@ -86,6 +86,21 @@ CREATE TABLE IF NOT EXISTS job_postings (
     created_at            TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS sandbox_sessions (
+    id                  TEXT PRIMARY KEY,          -- session_id (uuid4 hex)
+    scenario_id         TEXT NOT NULL,
+    user_id             INTEGER NOT NULL REFERENCES users(id),
+    namespace           TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'provisioning', -- provisioning|ready|verifying|passed|failed|error|destroyed
+    access_command      TEXT,
+    verification_logs   TEXT,
+    error_message       TEXT,
+    created_at          TEXT NOT NULL,
+    verified_at         TEXT,
+    destroyed_at        TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_user_section ON messages(user_id, section_id);
 CREATE INDEX IF NOT EXISTS idx_sections_course ON sections(course_id);
 CREATE INDEX IF NOT EXISTS idx_credentials_user ON credentials(user_id);
+CREATE INDEX IF NOT EXISTS idx_sandbox_sessions_user ON sandbox_sessions(user_id);

@@ -1,0 +1,37 @@
+# Placeholder mock-component and verifier images — these need to be built
+# as part of authoring this scenario for real. See the "mock fidelity" open
+# question in docs/Sandbox_Architecture.md.
+id: storage-array-down
+title: "Storage array unreachable"
+description: >
+  A production app server has lost connectivity to its iSCSI storage array.
+  Diagnose and restore the path, then run the verifier to confirm the fix.
+
+topology:
+  helm_chart: charts/scenario-base
+  components:
+    - name: app-server
+      image: mock-app-server:latest
+      port: 8080
+    - name: storage-array
+      image: mock-iscsi-target:latest
+      port: 3260
+    - name: monitoring
+      image: mock-monitoring:latest
+      port: 9090
+
+fault:
+  layer: infra
+  terraform_module: modules/fault_network_block
+  variables:
+    target: storage-array
+    block_port: 3260
+
+verifier:
+  image: verifier-storage-array-down:latest
+  command: ["pytest", "test_storage_path.py"]
+  timeout_seconds: 120
+
+session:
+  ttl_minutes: 90
+  idle_timeout_minutes: 20

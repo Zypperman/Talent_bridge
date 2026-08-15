@@ -136,14 +136,30 @@ catch up.
 
 ---
 
-## Solution 1: Micro-Credentials (MCs)
+## Solution 1: Micro-Credentials
+
+**The problem**
+A completion certificate proves a video was watched — not that the material
+was understood. Employers can't tell which "skills" on a profile are real.
+
+**How this solves it**
+Every concept becomes a Micro-Credential: an AI-assigned depth score (0–10)
+backed by an evidence log of quoted excerpts from the learner's own
+conversation — not a pass/fail checkbox.
+
+**What's different**
+Coursera-style platforms are top-down — they tell you a course covered a
+skill. Talent Bridge is bottom-up — it reports *how well*, and every score
+traces back to evidence anyone can check. No black box.
+
+---
+
+## Inside a Micro-Credential
 
 - The atomic, scored unit of a course: one concept / skill
-- Depth score (0–10) + exercise/scenario history + competency summary
-- **Bottom-up, not top-down** — Coursera tells you a skill was covered;
-  Talent Bridge reports *how well*
-- Fully transparent — every score traces back to quoted evidence, no black
-  box
+- Contains: depth score (0–10), exercise/scenario history, competency
+  summary
+- The score updates as new exercises complete — see Competency Decay
 
 ---
 
@@ -177,15 +193,30 @@ instead of continuing to decay.
 
 ## Solution 2: Course Creation & Section Gating
 
-- Course anchored to a real job description (MVP: hand-picked sample;
-  future: live LinkedIn scrape)
-- AI designs the course against that job + the learner's current
-  competencies
-- Sequential, gated sections (1.1, 1.2, 1.3, …) — **no skipping ahead**
-- Advancing requires a real conversation with the AI instructor
+**The problem**
+Generic curricula don't map to what a specific job actually needs, and
+click-through completion (watch → quiz → certificate) doesn't test whether
+the learner understood anything.
+
+**How this solves it**
+AI designs each course directly from a real job description. Content is
+split into sequential, gated sections — a learner can't advance without a
+real conversation with the AI instructor, proving genuine understanding.
+
+**What's different**
+Scoped "down to the T" to one job, not a fixed catalog course. Progression
+is gated by demonstrated understanding, not a quiz, and every AI-drafted
+course is validated by a human expert before it reaches a learner.
+
+---
+
+## How a Course Gets Built
+
+- Anchored to a real job description (MVP: hand-picked sample; future:
+  live LinkedIn scrape)
+- Sections numbered sequentially (1.1, 1.2, 1.3, …) — each unlocks only
+  after the previous is complete
 - Credential issues only once **every** section is genuinely completed
-- **A human domain expert reviews and validates every course** before it
-  reaches a learner
 
 ---
 
@@ -207,13 +238,30 @@ attempt.
 ## Solution 3: Sandbox Incident Simulation
 ### *(exploratory)*
 
-- Learner selects an incident modeled on a real data-center scenario
-  (storage array failure, latency spike, connectivity loss)
-- Cloud workspace via K8s, incident triggered via Terraform configuration
-- Troubleshoot to restore functionality, then run a test suite to confirm
+**The problem**
+Conceptual understanding alone doesn't prove someone can troubleshoot a
+real incident under real conditions — and tests like HackerRank only
+measure isolated problem-solving under exam pressure, in one sitting.
 
-**Unresolved:** which components need to be mocked, and how, to be
-realistic — not MVP-committed work.
+**How this solves it**
+Learners get a cloud workspace mocking a real data-center incident
+(storage array failure, latency spike) and must troubleshoot it back to
+working order, verified by an automated test suite.
+
+**What's different**
+Measures applied skill on real infrastructure patterns tied to the job,
+not a timed abstract puzzle — though this piece is still exploratory.
+
+---
+
+## Inside the Sandbox
+
+- Cloud workspace issued via K8s; incident triggered via Terraform
+  configuration
+- Learner troubleshoots, then a test suite confirms the exercise is
+  complete
+- **Unresolved:** which components need to be mocked, and how, to be
+  realistic — not MVP-committed work
 
 ---
 

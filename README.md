@@ -73,7 +73,7 @@ Talent_bridge/
 └── docs/                     # Product requirements, architecture notes, pitch materials
 ```
 
-## Getting started
+## Setup
 
 ### Prerequisites
 
@@ -125,7 +125,7 @@ uvicorn main:app --reload --app-dir gateway
 
 The API is served under `/api/*`, and the frontend at `static/index.html` is mounted at `/`.
 
-### Slides (Marp deck)
+## Slides (Marp deck)
 
 The product slide deck lives in `slides/` as a self-contained npm project (requires [Node.js](https://nodejs.org/)):
 

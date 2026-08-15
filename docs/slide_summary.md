@@ -5,7 +5,10 @@ slide-by-slide. This is the planning doc; the presentable Marp deck built from i
 lives at `slides/slides.md` (run `npm run preview` inside `slides/` to view it).
 
 Each `## Slide N` entry becomes one slide. Lines under `Notes:` are speaker notes,
-not on-slide content.
+not on-slide content. Each of the three solutions gets an intro slide in a fixed
+three-part format — **problem it addresses → how it solves that problem → what's
+different from existing solutions** — followed by whatever mechanics/detail slides
+are needed.
 
 ---
 
@@ -83,15 +86,27 @@ credibly — not waiting a generation for tertiary attainment to catch up.
 - Not (for MVP) horizontally-scaled infra, or a fully-realized sandbox
 - Not scoped narrowly to Batam — the mechanism must generalize
 
-## Slide 10 — Solution 1: Micro-Credentials (MCs)
+## Slide 10 — Solution 1: Micro-Credentials
+
+**The problem:** A completion certificate proves a video was watched — not that
+the material was understood. Employers can't tell which "skills" on a profile are
+real.
+
+**How this solves it:** Every concept becomes a Micro-Credential: an AI-assigned
+depth score (0–10) backed by an evidence log of quoted excerpts from the learner's
+own conversation — not a pass/fail checkbox.
+
+**What's different:** Coursera-style platforms are top-down — they tell you a
+course covered a skill. Talent Bridge is bottom-up — it reports *how well*, and
+every score traces back to evidence anyone can check. No black box.
+
+## Slide 11 — Inside a Micro-Credential
 
 - The atomic, scored unit of a course: one concept/skill
-- Depth score (0–10) + exercise/scenario history + competency summary
-- **Bottom-up, not top-down**: Coursera tells you a skill was covered; Talent
-  Bridge reports *how well*
-- Fully transparent — every score traces back to quoted evidence, no black box
+- Contains: depth score (0–10), exercise/scenario history, competency summary
+- The score updates as new exercises complete — see Competency Decay (Slide 13)
 
-## Slide 11 — Depth Score
+## Slide 12 — Depth Score
 
 AI-assigned, 0–10, derived from three dimensions of a section conversation:
 
@@ -103,9 +118,9 @@ Every score carries an evidence log — quoted excerpts from the actual
 conversation, not an opaque number.
 
 *(Open question: the exact formula combining the three dimensions is not yet
-defined — see Slide 20.)*
+defined — see Slide 23.)*
 
-## Slide 12 — Competency Decay
+## Slide 13 — Competency Decay
 
 - **−0.5 every 3 months** while unemployed, off a 0–10 scale, floors at 0
 - Refreshes upward on newer completed exercises
@@ -116,19 +131,31 @@ defined — see Slide 20.)*
 exercise scoring 9.0 at month 4 refreshes the stored score upward instead of
 continuing to decay.
 
-## Slide 13 — Solution 2: Course Creation & Section Gating
+## Slide 14 — Solution 2: Course Creation & Section Gating
+
+**The problem:** Generic curricula don't map to what a specific job actually
+needs, and click-through completion (watch → quiz → certificate) doesn't test
+whether the learner understood anything.
+
+**How this solves it:** AI designs each course directly from a real job
+description. Content is split into sequential, gated sections — a learner can't
+advance without a real conversation with the AI instructor, explaining the
+concept back and proving genuine understanding.
+
+**What's different:** Scoped "down to the T" to one job, not a fixed catalog
+course. Progression is gated by demonstrated understanding, not a quiz, and every
+AI-drafted course is validated by a human domain expert before it reaches a
+learner.
+
+## Slide 15 — How a Course Gets Built
 
 - Course is anchored to a real job description (MVP: a hand-picked sample;
   future: live LinkedIn scrape)
-- AI designs the course against that job + the learner's current competencies
-- Sequential, gated sections (1.1, 1.2, 1.3, …) — **no skipping ahead**
-- Advancing requires a real conversation with the AI instructor: explain the
-  concept back, demonstrate genuine understanding
+- Sections numbered sequentially (1.1, 1.2, 1.3, …) — each unlocks only after
+  the previous is complete
 - Credential issues only once **every** section is genuinely completed
-- AI drafts content; **a human domain expert reviews and validates every course**
-  before it reaches a learner
 
-## Slide 14 — Section Gating, Worked Example
+## Slide 16 — Section Gating, Worked Example
 
 A learner finishes reading 1.1 ("What is a storage array?"). To unlock 1.2 they
 must:
@@ -139,16 +166,30 @@ must:
 If they can only repeat memorized phrases without engaging the follow-up, the
 section stays locked and the AI flags the specific gap for another attempt.
 
-## Slide 15 — Solution 3: Sandbox Incident Simulation *(exploratory)*
+## Slide 17 — Solution 3: Sandbox Incident Simulation *(exploratory)*
 
-- Learner selects an incident modeled on a real data-center scenario (storage
-  array failure, latency spike, connectivity loss)
+**The problem:** Conceptual understanding alone doesn't prove someone can
+troubleshoot a real incident under real conditions — and technical interviews or
+tests like HackerRank only measure isolated problem-solving under exam pressure,
+in one sitting.
+
+**How this solves it:** Learners get a cloud workspace mocking a real
+data-center incident (storage array failure, latency spike) and must
+troubleshoot it back to working order, verified by an automated test suite.
+
+**What's different:** Measures applied skill on real infrastructure patterns
+tied to the job, not a timed abstract puzzle — though this piece is still
+exploratory (see Slide 23).
+
+## Slide 18 — Inside the Sandbox
+
 - Cloud workspace via K8s, incident triggered via Terraform configuration
-- Troubleshoot to restore functionality, then run a test suite to confirm
+- Learner troubleshoots to restore functionality, then runs a test suite to
+  confirm
 - **Unresolved:** which components need to be mocked, and how, to be realistic —
   not MVP-committed work
 
-## Slide 16 — Employer Matching
+## Slide 19 — Employer Matching
 
 - Employer lists required course credentials for a role
 - System returns every candidate who **genuinely earned** them — all sections,
@@ -161,7 +202,7 @@ section stays locked and the AI flags the specific gap for another attempt.
 completed only sections 2.1–2.2 of the second course → not matched, regardless of
 resume strength.
 
-## Slide 17 — MVP Scope Boundaries
+## Slide 20 — MVP Scope Boundaries
 
 | In MVP scope | Out of scope (future) |
 |---|---|
@@ -171,7 +212,7 @@ resume strength.
 | Human review of every AI-drafted course | Human appeal workflow for disputed evaluations |
 | Recruiter-facing skill tracing | Formal legal PDPA sign-off |
 
-## Slide 18 — Tech Stack
+## Slide 21 — Tech Stack
 
 | Layer | Technology | Why |
 |---|---|---|
@@ -186,7 +227,7 @@ precise control over teaching/evaluation prompts without unnecessary
 complexity, and the model/provider stays a config value instead of a
 hardcoded SDK dependency.
 
-## Slide 19 — Key Decisions (Load-Bearing)
+## Slide 22 — Key Decisions (Load-Bearing)
 
 - Bottom-up competency signal, not top-down completion
 - Full transparency to evidence — no black-box scores
@@ -195,7 +236,7 @@ hardcoded SDK dependency.
 - Human expert reviews every AI-drafted course before publish
 - Matching is rule-based on verified prerequisites, not a ranking model
 
-## Slide 20 — Open Questions
+## Slide 23 — Open Questions
 
 - What's the exact formula combining speed / explanation quality / question
   sharpness into one 0–10 depth score? *(needs product/eng sign-off)*
@@ -208,7 +249,7 @@ hardcoded SDK dependency.
 - How will live LinkedIn job scraping work — rate limits, ToS, freshness?
   *(post-MVP)*
 
-## Slide 21 — Closing
+## Slide 24 — Closing
 
 "This isn't about replacing human trainers. It's about giving Batam's workforce a
 fast, honest way to prove they're ready for these new roles — and giving
@@ -224,7 +265,7 @@ actually trust that signal."
 Fully transparent — the learner knows from sign-up that conversations are
 evaluated and that evaluation is what employers see. Nothing hidden; that
 transparency is itself part of the trust mechanism. (PDPA legal verification is
-still an open item — see Slide 20.)
+still an open item — see Slide 23.)
 
 ### A2. How would this scale to thousands of users?
 
@@ -243,4 +284,4 @@ unnecessary complexity at this stage.
 
 Every score is backed by a quoted excerpt from what the learner actually said —
 evidence-based, not a bare number. A production version would add a human
-review/appeal path on top of the same evidence log (not built yet — see Slide 20).
+review/appeal path on top of the same evidence log (not built yet — see Slide 23).
