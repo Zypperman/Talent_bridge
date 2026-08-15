@@ -4,18 +4,12 @@ ONE section's content, then evaluates the learner's understanding across
 three parameters: speed, explanation quality, question sharpness.
 """
 
-import os, json, sqlite3
+import os, json
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from datetime import datetime, timezone
 
 load_dotenv()
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-_DB_PATH = "/opt/talentbridge/data/talentbridge.db"
-
-
-def _get_db():
-    return sqlite3.connect(_DB_PATH, check_same_thread=False)
 
 
 TEACHING_SYSTEM_PROMPT = """You are a technical instructor for a data-center operations training platform. You are teaching ONE specific section of a course, described below. Stay strictly within the scope of this section's content — do not wander into other topics.

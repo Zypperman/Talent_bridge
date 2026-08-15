@@ -4,7 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-db = sqlite3.connect("data/talentbridge.db")
+db = sqlite3.connect(os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db"))
+
+_schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
+db.executescript(open(_schema_path).read())
 
 COURSES = [
     {

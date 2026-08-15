@@ -1,0 +1,16 @@
+{
+  "name": "talent-bridge-slides",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Marp slide deck for the Talent Bridge PRD",
+  "scripts": {
+    "preview": "marp -w -p slides.md",
+    "server": "marp -w -s .",
+    "build:html": "marp slides.md -o dist/slides.html",
+    "build:pdf": "marp slides.md --pdf -o dist/slides.pdf",
+    "build:pptx": "marp slides.md --pptx -o dist/slides.pptx"
+  },
+  "devDependencies": {
+    "@marp-team/marp-cli": "^4.0.3"
+  }
+}

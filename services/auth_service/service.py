@@ -4,11 +4,12 @@ completely separate account types with their own tables.
 """
 
 import bcrypt
+import os
 import secrets
 import sqlite3
 from datetime import datetime, timezone
 
-_DB_PATH = "/opt/talentbridge/data/talentbridge.db"
+_DB_PATH = os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db")
 
 
 def _get_db():
