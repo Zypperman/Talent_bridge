@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Talent Bridge</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0d0f; color: #e8e8e8; font-family: -apple-system, sans-serif; }
+  .container { max-width: 720px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 32px; margin-bottom: 8px; }
+  h2 { font-size: 22px; margin-bottom: 16px; }
+  p.sub { color: #999; margin-bottom: 32px; }
+  .card { background: #1a1a1c; border: 1px solid #2e2e30; border-radius: 12px; padding: 24px; margin-bottom: 16px; cursor: pointer; }
+  .card:hover { border-color: #4a4a4e; }
+  .role-choice { display: flex; gap: 16px; margin-top: 24px; }
+  .role-btn { flex: 1; padding: 32px 20px; text-align: center; font-size: 18px; }
+  input, textarea { width: 100%; padding: 12px 14px; margin-bottom: 12px; background: #1a1a1c; border: 1px solid #2e2e30; border-radius: 8px; color: #e8e8e8; font-size: 14px; }
+  button.primary { width: 100%; padding: 13px; background: #e8e8e8; color: #0d0d0f; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; margin-top: 8px; }
+  button.primary:hover { background: #fff; }
+  a.link { color: #8aa5c0; cursor: pointer; text-decoration: underline; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; margin-right: 6px; }
+  .badge.completed { background: #1e3a2f; color: #6fcf97; }
+  .badge.in_progress { background: #3a2f1e; color: #e0b268; }
+  .badge.not_started { background: #2a2a2c; color: #999; }
+  .chat-box { border: 1px solid #2e2e30; border-radius: 12px; padding: 16px; min-height: 300px; max-height: 450px; overflow-y: auto; margin-bottom: 12px; }
+  .msg { margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.5; }
+  .msg.user { background: #263340; text-align: right; }
+  .msg.assistant { background: #1a1a1c; }
+  .topnav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .topnav a { color: #999; font-size: 13px; cursor: pointer; margin-left: 16px; }
+  .score-row { display: flex; gap: 16px; font-size: 13px; color: #999; margin-top: 6px; }
+  .back { color: #999; font-size: 13px; cursor: pointer; margin-bottom: 20px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="container" id="app"></div>
+<script>
+const API = '';
+let state = { view: 'landing', token: localStorage.getItem('tb_token'), accountType: localStorage.getItem('tb_type'), account: null, courses: [], currentCourse: null, sections: [], currentSection: null, conversation: [], candidates: [], jobs: [] };
+
+async function api(path, method='GET', body=null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(API + path, { method, headers, body: body ? JSON.stringify(body) : null });
+  return res.json();
+}
+
+function setToken(token, type) {
+  state.token = token; state.accountType = type;
+  localStorage.setItem('tb_token', token); localStorage.setItem('tb_type', type);
+}
+function logout() {
+  localStorage.removeItem('tb_token'); localStorage.removeItem('tb_type');
+  state = { view: 'landing', token: null, accountType: null, account: null, courses: [], sections: [], conversation: [] };
+  render();
+}
+async function nav(view) { state.view = view; await render(); }
+
+async function checkAuth() {
+  if (!state.token) return false;
+  const r = await api('/api/auth/me');
+  if (r.error) { logout(); return false; }
+  state.account = r.account;
+  return true;
+}
+
+function el(html) { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+
+async function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  let view;
+  if (state.view === 'landing') view = renderLanding();
+  else if (state.view === 'user_login') view = renderUserLogin();
+  else if (state.view === 'user_signup') view = renderUserSignup();
+  else if (state.view === 'employer_login') view = renderEmployerLogin();
+  else if (state.view === 'employer_signup') view = renderEmployerSignup();
+  else if (state.view === 'courses') view = await renderCourses();
+  else if (state.view === 'sections') view = await renderSections();
+  else if (state.view === 'section_chat') view = renderSectionChat();
+  else if (state.view === 'my_credentials') view = await renderCredentials();
+  else if (state.view === 'employer_candidates') view = await renderCandidates();
+  else if (state.view === 'employer_jobs') view = await renderJobs();
+  if (view) app.appendChild(view);
+}
+
+function renderLanding() {
+  return el(`
+    <div>
+      <h1>Talent Bridge</h1>
+      <p class="sub">Verified skills. Real understanding. Genuine hiring signal.</p>
+      <div class="role-choice">
+        <div class="card role-btn" onclick="nav('user_login')">I'm here to learn<br><span style="color:#8aa5c0;font-size:13px">Log in / Sign up</span></div>
+        <div class="card role-btn" onclick="nav('employer_login')">I'm hiring<br><span style="color:#8aa5c0;font-size:13px">Employer login</span></div>
+      </div>
+    </div>
+  `);
+}
+
+function renderUserLogin() {
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('landing')">← Back</a>
+      <h2>Learner Login</h2>
+      <input id="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <div id="err" style="color:#e07a5f;font-size:13px;margin-bottom:8px"></div>
+      <button class="primary" id="btn">Log in</button>
+      <p style="margin-top:16px;font-size:13px;color:#999">No account? <a class="link" onclick="nav('user_signup')">Sign up</a></p>
+    </div>
+  `);
+  c.querySelector('#btn').onclick = async () => {
+    const email = c.querySelector('#email').value, password = c.querySelector('#password').value;
+    const r = await api('/api/auth/login/user', 'POST', { email, password });
+    if (r.error) { c.querySelector('#err').textContent = r.error; return; }
+    setToken(r.token, 'user');
+    await checkAuth();
+    nav('courses');
+  };
+  return c;
+}
+
+function renderUserSignup() {
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('landing')">← Back</a>
+      <h2>Create Your Learner Profile</h2>
+      <input id="name" placeholder="Full name" />
+      <input id="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <input id="education" placeholder="Education (e.g. B.Tech Computer Science)" />
+      <input id="experience" placeholder="Experience (e.g. 2 years IT support)" />
+      <input id="company" placeholder="Current company (or 'None')" />
+      <input id="certs" placeholder="Certifications (or 'None')" />
+      <div id="err" style="color:#e07a5f;font-size:13px;margin-bottom:8px"></div>
+      <button class="primary" id="btn">Create account</button>
+    </div>
+  `);
+  c.querySelector('#btn').onclick = async () => {
+    const body = {
+      name: c.querySelector('#name').value, email: c.querySelector('#email').value,
+      password: c.querySelector('#password').value, education: c.querySelector('#education').value,
+      experience: c.querySelector('#experience').value, current_company: c.querySelector('#company').value,
+      certifications: c.querySelector('#certs').value
+    };
+    const r = await api('/api/auth/signup/user', 'POST', body);
+    if (r.error) { c.querySelector('#err').textContent = r.error; return; }
+    setToken(r.token, 'user');
+    await checkAuth();
+    nav('courses');
+  };
+  return c;
+}
+
+function renderEmployerLogin() {
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('landing')">← Back</a>
+      <h2>Employer Login</h2>
+      <input id="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <div id="err" style="color:#e07a5f;font-size:13px;margin-bottom:8px"></div>
+      <button class="primary" id="btn">Log in</button>
+      <p style="margin-top:16px;font-size:13px;color:#999">No account? <a class="link" onclick="nav('employer_signup')">Sign up</a></p>
+    </div>
+  `);
+  c.querySelector('#btn').onclick = async () => {
+    const email = c.querySelector('#email').value, password = c.querySelector('#password').value;
+    const r = await api('/api/auth/login/employer', 'POST', { email, password });
+    if (r.error) { c.querySelector('#err').textContent = r.error; return; }
+    setToken(r.token, 'employer');
+    await checkAuth();
+    nav('employer_candidates');
+  };
+  return c;
+}
+
+function renderEmployerSignup() {
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('landing')">← Back</a>
+      <h2>Create Employer Account</h2>
+      <input id="company" placeholder="Company name" />
+      <input id="contact" placeholder="Contact name" />
+      <input id="email" placeholder="Email" />
+      <input id="password" type="password" placeholder="Password" />
+      <div id="err" style="color:#e07a5f;font-size:13px;margin-bottom:8px"></div>
+      <button class="primary" id="btn">Create account</button>
+    </div>
+  `);
+  c.querySelector('#btn').onclick = async () => {
+    const body = {
+      company_name: c.querySelector('#company').value, contact_name: c.querySelector('#contact').value,
+      email: c.querySelector('#email').value, password: c.querySelector('#password').value
+    };
+    const r = await api('/api/auth/signup/employer', 'POST', body);
+    if (r.error) { c.querySelector('#err').textContent = r.error; return; }
+    setToken(r.token, 'employer');
+    await checkAuth();
+    nav('employer_candidates');
+  };
+  return c;
+}
+
+async function renderCourses() {
+  const r = await api('/api/courses');
+  state.courses = r.courses;
+  const c = el(`<div><div class="topnav"><h2 style="margin:0">Courses</h2><div><a onclick="nav('my_credentials')">My Credentials</a><a onclick="logout()">Log out</a></div></div><div id="list"></div></div>`);
+  const list = c.querySelector('#list');
+  state.courses.forEach(course => {
+    const card = el(`<div class="card"><h2 style="font-size:18px">${course.title}</h2><p style="color:#999;font-size:14px;margin-top:6px">${course.description}</p></div>`);
+    card.onclick = () => { state.currentCourse = course; nav('sections'); };
+    list.appendChild(card);
+  });
+  return c;
+}
+
+async function renderSections() {
+  const r = await api(`/api/courses/${state.currentCourse.id}/sections`);
+  state.sections = r.sections;
+  const c = el(`<div><a class="back" onclick="nav('courses')">← All courses</a><h2>${state.currentCourse.title}</h2><div id="list" style="margin-top:16px"></div></div>`);
+  const list = c.querySelector('#list');
+  state.sections.forEach(s => {
+    const card = el(`<div class="card"><span style="color:#999;font-size:13px">${s.section_number}</span><h2 style="font-size:16px;margin:4px 0 8px">${s.title}</h2><span class="badge ${s.status}">${s.status.replace('_',' ')}</span></div>`);
+    card.onclick = () => { state.currentSection = s; nav('section_chat'); };
+    list.appendChild(card);
+  });
+  return c;
+}
+
+function renderSectionChat() {
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('sections')">← ${state.currentCourse.title}</a>
+      <h2>${state.currentSection.section_number} — ${state.currentSection.title}</h2>
+      <div class="chat-box" id="chatBox"></div>
+      <div style="display:flex;gap:8px">
+        <input id="msgInput" placeholder="Type your message..." style="margin-bottom:0" />
+        <button class="primary" id="sendBtn" style="width:auto;padding:12px 20px">Send</button>
+      </div>
+      <button class="primary" id="completeBtn" style="background:#8aa5c0;margin-top:16px">Mark Section Complete</button>
+      <div id="completeMsg" style="margin-top:12px;font-size:14px"></div>
+    </div>
+  `);
+
+  const box = c.querySelector('#chatBox');
+
+  async function load() {
+    const r = await api(`/api/sections/${state.currentSection.id}`);
+    state.conversation = r.conversation;
+    box.innerHTML = '';
+    state.conversation.forEach(m => {
+      box.appendChild(el(`<div class="msg ${m.role}">${m.content.replace(/\n/g, '<br>')}</div>`));
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function send() {
+    const input = c.querySelector('#msgInput');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+    box.appendChild(el(`<div class="msg user">${message}</div>`));
+    box.scrollTop = box.scrollHeight;
+    const r = await api('/api/chat', 'POST', { section_id: state.currentSection.id, message });
+    box.appendChild(el(`<div class="msg assistant">${(r.reply||'').replace(/\n/g, '<br>')}</div>`));
+    box.scrollTop = box.scrollHeight;
+  }
+
+  c.querySelector('#sendBtn').onclick = send;
+  c.querySelector('#msgInput').onkeydown = (e) => { if (e.key === 'Enter') send(); };
+
+  c.querySelector('#completeBtn').onclick = async () => {
+    const r = await api('/api/sections/complete', 'POST', { section_id: state.currentSection.id });
+    const msg = c.querySelector('#completeMsg');
+    if (r.credential_issued) {
+      msg.innerHTML = '<span style="color:#e0b268">🎉 Course complete — credential earned!</span>';
+    } else if (r.completed) {
+      msg.innerHTML = '<span style="color:#6fcf97">Section marked complete.</span>';
+    }
+  };
+
+  load();
+  return c;
+}
+
+async function renderCredentials() {
+  const r = await api('/api/my/credentials');
+  const c = el(`<div><a class="back" onclick="nav('courses')">← Courses</a><h2>My Credentials</h2><div id="list" style="margin-top:16px"></div></div>`);
+  const list = c.querySelector('#list');
+  if (r.credentials.length === 0) {
+    list.appendChild(el(`<p style="color:#999">No credentials earned yet — complete a course to earn one.</p>`));
+  }
+  r.credentials.forEach(cr => {
+    list.appendChild(el(`<div class="card"><h2 style="font-size:16px">${cr.course_title}</h2><p style="color:#999;font-size:13px;margin-top:4px">Earned ${new Date(cr.issued_at).toLocaleDateString()}</p></div>`));
+  });
+  return c;
+}
+
+async function renderCandidates() {
+  const r = await api('/api/employer/candidates');
+  state.candidates = r.candidates;
+  const c = el(`<div><div class="topnav"><h2 style="margin:0">Candidates</h2><div><a onclick="nav('employer_jobs')">Job Postings</a><a onclick="logout()">Log out</a></div></div><div id="list"></div></div>`);
+  const list = c.querySelector('#list');
+  state.candidates.forEach(cand => {
+    const credBadges = cand.credentials.map(cr => `<span class="badge completed">${cr.course_title}</span>`).join('');
+    const scoreHtml = cand.section_scores.map(s => `<div class="score-row"><span>${s.section_title}</span><span>Speed: ${s.speed}</span><span>Explanation: ${s.explanation}</span><span>Question Sharpness: ${s.sharpness}</span></div>`).join('');
+    list.appendChild(el(`<div class="card"><h2 style="font-size:16px">${cand.name}</h2><p style="color:#999;font-size:13px">${cand.email} · ${cand.current_company||''}</p><div style="margin-top:10px">${credBadges || '<span style=\"color:#999;font-size:13px\">No credentials yet</span>'}</div>${scoreHtml}</div>`));
+  });
+  return c;
+}
+
+async function renderJobs() {
+  const r = await api('/api/employer/jobs');
+  state.jobs = r.jobs;
+  const c = el(`
+    <div>
+      <a class="back" onclick="nav('employer_candidates')">← Candidates</a>
+      <h2>Job Postings</h2>
+      <div class="card">
+        <input id="jobTitle" placeholder="Job title" />
+        <input id="jobDesc" placeholder="Description" />
+        <p style="font-size:13px;color:#999;margin-bottom:8px">Required courses:</p>
+        ${state.courses.map(c2 => `<label style="display:block;font-size:13px;margin-bottom:6px"><input type="checkbox" value="${c2.id}" class="jobCourse" style="width:auto;margin-right:6px"/>${c2.title}</label>`).join('')}
+        <button class="primary" id="postBtn">Post Job</button>
+      </div>
+      <div id="list" style="margin-top:20px"></div>
+    </div>
+  `);
+
+  if (state.courses.length === 0) {
+    const r2 = await api('/api/courses');
+    state.courses = r2.courses;
+  }
+
+  c.querySelector('#postBtn').onclick = async () => {
+    const ids = Array.from(c.querySelectorAll('.jobCourse:checked')).map(el2 => parseInt(el2.value));
+    await api('/api/employer/jobs', 'POST', {
+      title: c.querySelector('#jobTitle').value,
+      description: c.querySelector('#jobDesc').value,
+      required_course_ids: ids
+    });
+    nav('employer_jobs');
+  };
+
+  const list = c.querySelector('#list');
+  state.jobs.forEach(job => {
+    const matches = job.matched_candidates.map(m => `<span class="badge completed">${m.name}</span>`).join('') || '<span style="color:#999;font-size:13px">No matches yet</span>';
+    list.appendChild(el(`<div class="card"><h2 style="font-size:16px">${job.title}</h2><p style="color:#999;font-size:13px;margin:6px 0">${job.description}</p><p style="font-size:12px;color:#999;margin-bottom:6px">Matched candidates:</p>${matches}</div>`));
+  });
+  return c;
+}
+
+(async function init() {
+  if (state.token) {
+    const ok = await checkAuth();
+    if (ok) { nav(state.accountType === 'employer' ? 'employer_candidates' : 'courses'); return; }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
