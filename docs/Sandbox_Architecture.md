@@ -165,7 +165,7 @@ flowchart TB
 - **Images**: scenario container images (mock storage array, mock app server, verifier images) live in Artifact Registry, built via Cloud Build on push — this is also where "author a new scenario" becomes a PR that adds a YAML file plus however many mock-component images it needs.
 - **Data**: SQLite doesn't hold up under concurrent multi-instance access, so the main app's database moves to Cloud SQL (Postgres) at the same time the sandbox goes to GCP — both the app and the sandbox orchestrator read/write `sandbox_sessions`, `section_progress`, `credentials` there.
 - **Lifecycle**: Cloud Scheduler hits the orchestrator every few minutes to sweep expired/idle sessions (`ttl_minutes`/`idle_timeout_minutes` from the scenario config) and run `terraform destroy` + namespace deletion — this is the control that keeps cost bounded.
-- **Secrets**: Secret Manager for DB credentials, Anthropic API key, and any service-to-service auth — mirrors how `ANTHROPIC_API_KEY` is loaded via `.env`/`dotenv` today in [teaching_service.py](services/teaching_service.py#L12), just moved out of a `.env` file.
+- **Secrets**: Secret Manager for DB credentials, the OpenRouter key, and any service-to-service auth — mirrors how `OPENROUTER_KEY` is loaded via `.env`/`dotenv` today in [teaching_service/service.py](../services/teaching_service/service.py), just moved out of a `.env` file.
 
 ## 6. End-to-end session flow (both variants)
 

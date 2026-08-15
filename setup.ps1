@@ -11,8 +11,8 @@ try {
 
 # 2. .env
 if (-not (Test-Path ".env")) {
-    Write-Host "Creating .env (fill in ANTHROPIC_API_KEY before chatting or seeding courses)..."
-    Set-Content -Path ".env" -Value "ANTHROPIC_API_KEY="
+    Write-Host "Creating .env (fill in OPENROUTER_KEY before chatting or seeding courses)..."
+    Set-Content -Path ".env" -Value "OPENROUTER_KEY="
 }
 
 # 3. Data directory (bind-mounted into the gateway/auth-service/teaching-service containers)
@@ -23,10 +23,10 @@ Write-Host "Building and starting services..."
 Write-Host "Gateway will be available at http://127.0.0.1:8000 once containers are up."
 
 $envContent = Get-Content ".env" -Raw
-if ($envContent -notmatch "ANTHROPIC_API_KEY=\S+") {
-    Write-Host "Note: ANTHROPIC_API_KEY is not set in .env yet, so teaching-service will fail to answer chats/evaluations until you set it and restart."
+if ($envContent -notmatch "OPENROUTER_KEY=\S+") {
+    Write-Host "Note: OPENROUTER_KEY is not set in .env yet, so teaching-service will fail to answer chats/evaluations until you set it and restart."
 }
-Write-Host "Once ANTHROPIC_API_KEY is set and containers are running, seed courses (once) with:"
+Write-Host "Once OPENROUTER_KEY is set and containers are running, seed courses (once) with:"
 Write-Host "    docker compose run --rm teaching-service python generate_courses.py"
 
 docker compose up --build

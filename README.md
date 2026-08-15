@@ -22,7 +22,7 @@ Course content itself is AI-drafted and then human-reviewed for technical accura
 
 - Separate learner and employer accounts with token-based auth
 - Section-by-section course progression with per-user progress tracking
-- Claude-powered Socratic teaching, scoped to one section at a time
+- Claude-powered Socratic teaching (via OpenRouter), scoped to one section at a time
 - Automated, evidence-backed evaluation (speed / explanation / question sharpness)
 - Credential issuance on full course completion
 - Employer dashboard: browse candidates with their credentials and scores
@@ -36,7 +36,7 @@ Course content itself is AI-drafted and then human-reviewed for technical accura
 | Auth service | Python, standalone process | Signup/login + token auth for learners and employers, isolated from the rest of the app |
 | Teaching service | Python, standalone process | Socratic teaching replies + section evaluation via Claude, isolated so an AI-call slowdown can't block auth or course browsing |
 | Service messaging | Redis (request/reply queues) | Gateway and services run as independent processes/containers and talk over a queue instead of function calls |
-| AI engine | Anthropic Claude API | Powers Socratic teaching, post-conversation evaluation, and initial course content drafting |
+| AI engine | Claude, via [OpenRouter](https://openrouter.ai/) | Powers Socratic teaching, post-conversation evaluation, and initial course content drafting; routed through OpenRouter's OpenAI-compatible API so the model/provider is a config value, not a hardcoded SDK dependency |
 | Database | SQLite | Single shared file, no separate DB server — simple and reliable at this scale; bind-mounted into every container that needs it |
 | Frontend | Plain HTML/CSS/JavaScript | No build step, one file, nothing to break live during a demo |
 | Deployment | Docker Compose | Each service builds and runs as its own container; `docker compose up` brings up the whole system |
@@ -78,7 +78,7 @@ Talent_bridge/
 ### Prerequisites
 
 - [Docker](https://www.docker.com/) with Compose v2 (`docker compose ...`)
-- An [Anthropic API key](https://console.anthropic.com/)
+- An [OpenRouter API key](https://openrouter.ai/keys)
 
 ### Quick start
 
@@ -94,7 +94,7 @@ Talent_bridge/
 
 The gateway comes up at `http://127.0.0.1:8000`. On startup it applies `schema.sql` to `data/talentbridge.db` automatically (safe to run repeatedly — every statement is `CREATE ... IF NOT EXISTS`).
 
-If `.env` doesn't have `ANTHROPIC_API_KEY` set yet, `teaching-service` will start but fail Claude calls — fill it in and re-run `docker compose up --build`. Once it's set and the containers are running, seed the courses table (once, if empty):
+If `.env` doesn't have `OPENROUTER_KEY` set yet, `teaching-service` will start but fail Claude calls — fill it in and re-run `docker compose up --build`. Once it's set and the containers are running, seed the courses table (once, if empty):
 
 ```bash
 docker compose run --rm teaching-service python generate_courses.py
@@ -109,13 +109,13 @@ Each piece can also run locally as a plain Python process — useful for quick i
 ```bash
 python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\Activate.ps1 on Windows
 pip install -r requirements.txt
-echo "ANTHROPIC_API_KEY=your-api-key-here" > .env
+echo "OPENROUTER_KEY=your-api-key-here" > .env
 export TALENTBRIDGE_DB_PATH="$(pwd)/data/talentbridge.db"   # $env:TALENTBRIDGE_DB_PATH = ... on Windows
 export REDIS_URL="redis://localhost:6379/0"                 # $env:REDIS_URL = ... on Windows
 export PYTHONPATH="$(pwd)"                                   # $env:PYTHONPATH = ... on Windows — lets gateway/ and services/*/ import common.rpc
 mkdir -p data
 python -c "import sqlite3; sqlite3.connect('data/talentbridge.db').executescript(open('schema.sql').read())"
-python generate_courses.py   # seeds courses, requires ANTHROPIC_API_KEY
+python generate_courses.py   # seeds courses, requires OPENROUTER_KEY
 
 # in three separate terminals (same env vars in each):
 python services/auth_service/worker.py
@@ -124,6 +124,26 @@ uvicorn main:app --reload --app-dir gateway
 ```
 
 The API is served under `/api/*`, and the frontend at `static/index.html` is mounted at `/`.
+
+### Slides (Marp deck)
+
+The product slide deck lives in `slides/` as a self-contained npm project (requires [Node.js](https://nodejs.org/)):
+
+```bash
+cd slides
+npm install
+npm run preview   # live-reloading preview at http://localhost:8080
+```
+
+Edit `slides/slides.md` and the preview updates automatically. To export a static file instead:
+
+```bash
+npm run build:html   # slides/dist/slides.html
+npm run build:pdf     # slides/dist/slides.pdf
+npm run build:pptx    # slides/dist/slides.pptx
+```
+
+The deck's content plan (slide-by-slide outline the deck is built from) lives at [docs/slide_summary.md](docs/slide_summary.md).
 
 ## API overview
 

@@ -1,9 +1,10 @@
 import os, sqlite3, json
-from anthropic import Anthropic
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENROUTER_KEY"), base_url="https://openrouter.ai/api/v1")
+MODEL = "anthropic/claude-sonnet-4-6"
 db = sqlite3.connect(os.getenv("TALENTBRIDGE_DB_PATH", "/opt/talentbridge/data/talentbridge.db"))
 
 _schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
@@ -47,13 +48,13 @@ Respond with ONLY valid JSON, no markdown fences, no other text, in this exact f
 
 Order sections from most foundational to most advanced. Each section's content should be substantial enough to teach the concept properly, but focused on ONE clear idea per section."""
 
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
+    response = client.chat.completions.create(
+        model=MODEL,
         max_tokens=4000,
         messages=[{"role": "user", "content": prompt}]
     )
 
-    raw = response.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     if raw.startswith("```"):
         lines = raw.split("\n")
         raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])

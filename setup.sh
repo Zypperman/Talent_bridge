@@ -11,8 +11,8 @@ fi
 
 # 2. .env
 if [ ! -f ".env" ]; then
-    echo "Creating .env (fill in ANTHROPIC_API_KEY before chatting or seeding courses)..."
-    echo "ANTHROPIC_API_KEY=" > .env
+    echo "Creating .env (fill in OPENROUTER_KEY before chatting or seeding courses)..."
+    echo "OPENROUTER_KEY=" > .env
 fi
 
 # 3. Data directory (bind-mounted into the gateway/auth-service/teaching-service containers)
@@ -22,10 +22,10 @@ mkdir -p data
 echo "Building and starting services..."
 echo "Gateway will be available at http://127.0.0.1:8000 once containers are up."
 
-if ! grep -q "ANTHROPIC_API_KEY=." .env 2>/dev/null; then
-    echo "Note: ANTHROPIC_API_KEY is not set in .env yet, so teaching-service will fail to answer chats/evaluations until you set it and restart."
+if ! grep -q "OPENROUTER_KEY=." .env 2>/dev/null; then
+    echo "Note: OPENROUTER_KEY is not set in .env yet, so teaching-service will fail to answer chats/evaluations until you set it and restart."
 fi
-echo "Once ANTHROPIC_API_KEY is set and containers are running, seed courses (once) with:"
+echo "Once OPENROUTER_KEY is set and containers are running, seed courses (once) with:"
 echo "    docker compose run --rm teaching-service python generate_courses.py"
 
 docker compose up --build

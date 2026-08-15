@@ -1,80 +1,246 @@
-**Talent Bridge — Hackathon Pitch Preparation** 
+# Talent Bridge — Slide Content Plan
 
-**THE PITCH** 
+Content outline derived from `Product Requirement Document_draft.md`, restructured
+slide-by-slide. This is the planning doc; the presentable Marp deck built from it
+lives at `slides/slides.md` (run `npm run preview` inside `slides/` to view it).
 
-**Opening (hook — start here)**
+Each `## Slide N` entry becomes one slide. Lines under `Notes:` are speaker notes,
+not on-slide content.
 
-“Batam's data center boom is creating real technical jobs — but most of Batam's current tech workforce is in operational roles, not the specialized engineering roles this boom needs. The skills gap is real. The question is: how do you close it fast, and how does an employer actually trust that someone is ready?” 
+---
 
-**The problem (be sharp, not long)** 
+## Slide 1 — Title
 
-“Today, if someone wants to upskill, they go to YouTube, Udemy, Coursera, Pluralsight. These platforms have real experts creating real content — that's not the problem. The problem is what happens after the content: a multiple-choice quiz at the end, and a 'Certificate of Completion.' That certificate proves you watched the videos. It doesn't prove you understand the material. And when an employer sees that certificate, they have no real way to know the difference.” 
+**Talent Bridge**
+Proving understanding, not attendance.
 
-**The solution** 
+Notes: Batam data-center hiring, hackathon pitch context.
 
-“Talent Bridge closes that gap with one core idea: **learning through real conversation, not content consumption.** 
+## Slide 2 — Hook
 
-AI drafts each course — I personally review and validate every course for technical accuracy before it reaches a learner, since I have real hands-on experience in this domain myself. 
+"Batam's data-center boom is creating real technical jobs — but most of Batam's
+current tech workforce is in operational roles, not the specialized engineering
+roles this boom needs. The question is: how do you close that gap fast, and how
+does an employer actually trust that someone is ready?"
 
-Each course is broken into sequential sections — 1.1, 1.2, 1.3 — each one building on the last. A learner can't skip ahead. To move from 1.1 to 1.2, they have to have a real conversation with an AI instructor, explain the concept back in their own words, and demonstrate they actually understood it — not just clicked through it. 
+## Slide 3 — The Problem
 
-While that conversation happens, Talent Bridge is transparently evaluating three things: how quickly they reached real understanding, how well they explained it back, and how sharp their own questions were. The learner knows this is happening — it's not hidden. That evaluation is exactly what gets shown to employers. 
+- Batam open unemployment: **7.68%** in 2024 — 50,431 people
+- Most are SMA/SMK graduates; only **13.74%** of Batam's workforce holds tertiary
+  qualifications
+- Data centers are capital-intensive, not labour-intensive: a 50MW facility employs
+  1,500–2,000 during construction but only **50–150** once operational — vs.
+  8,000–12,000 direct jobs for equivalent manufacturing investment
+- Rp120 trillion of digital investment → a permanent headcount too small and too
+  specialised to touch the people who are actually unemployed
 
-A credential only gets issued once every section of a course is genuinely completed. So when an employer sees a Talent Bridge credential, they're not looking at a certificate — they're looking at evidence.” 
+## Slide 4 — Who Hurts
 
-**How the employer side works** 
+- **Batam's unemployed/underemployed workforce** — need a fast path into
+  data-center-adjacent technical roles, but lack access to specialized,
+  job-relevant training
+- **Employers in Batam and Singapore** — can't tell from a resume or a completion
+  certificate whether a candidate actually understands the material
 
-“Employers post a job, list the required course credentials, and instantly see every candidate whose verified understanding matches — not a resume claim, actual demonstrated competence, backed by a real transcript.” 
+## Slide 5 — Current Workaround Fails
 
-**Closing (end here)**  
-“This isn't about replacing human trainers. It's about giving Batam's workforce a fast, honest way to prove they're ready for these new roles — and giving employers, whether in Batam or across the strait in Singapore, a reason to actually trust that signal.” 
+- Workers self-teach via YouTube, Udemy, Coursera, Pluralsight — genuinely good
+  expert content
+- They walk away with a multiple-choice quiz result and a **"Certificate of
+  Completion"**
+- **That certificate proves the video was watched — not that the material was
+  understood.**
+- Employers fall back on resume claims, interviews, or platform prestige — none of
+  which measure competency directly
 
-**PRODUCT STACK — WHAT AND WHY**
+## Slide 6 — Why Now
 
-| Layer  | Technology  | Why this choice |
-| :---- | :---- | :---- |
-| **Backend**  | Python \+ FastAPI  | Fast to build, handles every API call — routes each learner's message to Claude and back |
-| **AI Engine**  | Anthropic Claude API  | Powers three things: (1) Socratic teaching of each section, (2) post-conversation evaluation on  speed/explanation/question-sharpness, (3) initial course content drafting (human-reviewed after) |
-| **Database**  | SQLite  | Single lightweight file, no separate database server — simple and reliable at this scale |
-| **Frontend**  | Plain  HTML/CSS/JavaScript | No build tools, no framework — one file that loads instantly and has nothing to break live during a demo |
-| **Hosting**  | Self-managed Linux  server,  systemd-managed  process | Runs permanently, auto-restarts if it ever crashes, independent of my own machine being on |
-| **Architecture**  | Fully independent,  isolated application | Not bolted onto any existing product — own database, own server process, built specifically for this problem |
+Capital is arriving faster than the workforce can be made legible to it. Closing
+the gap means building exactly the skills these roles need and proving them
+credibly — not waiting a generation for tertiary attainment to catch up.
 
-**TOUGH FOLLOW-UP QUESTIONS — PREPARED ANSWERS** 
+## Slide 7 — The Solution
 
-**Q: How do you know the AI-generated course content is actually accurate?** “AI drafts it, but I personally review and validate every course before it goes live — I have real hands-on experience in this domain, so I'm not blindly trusting AI output. It's AI-assisted authoring with human expert validation, not fully autonomous content.” 
+**Learning through real conversation, not content consumption.**
 
-**Q: Isn't it a privacy concern that you're evaluating and scoring users?** 
+1. Micro-credentials — competency, scored and evidenced, not a certificate
+2. Socratic, section-gated course creation — can't skip ahead, can't fake it
+3. (Exploratory) sandbox incident simulation for hands-on practice
 
-“No — it's fully transparent. The learner knows from the moment they sign up that their learning conversations are being evaluated, and that this evaluation is what employers will see. There's nothing hidden. That transparency is actually part of the trust mechanism.” 
+## Slide 8 — Goals
 
-**Q: How is this different from a technical interview or a coding test like HackerRank?** “Those test isolated problem-solving under pressure, in one sitting. Talent Bridge measures genuine understanding built progressively, over a real learning journey — arguably a more honest signal of whether someone actually knows the material, not just how they perform under exam conditions.” 
+1. Fill knowledge gaps and validate competency by demonstrated understanding —
+   not the prestige of the issuing platform
+2. Design courses tightly scoped to real job requirements, "down to the T"
+3. Give recruiters an objective, evidence-backed way to assess a specific skill —
+   not just whether a credential exists
 
-**Q: Walk me through the matching algorithm.** 
+## Slide 9 — Non-Goals
 
-“It's straightforward and intentional: an employer lists which course credentials a role requires, and the system shows every candidate who has genuinely earned those credentials — meaning they completed every section with confirmed understanding. It's not a black-box ranking algorithm; it's built on real, verified prerequisites, which is exactly what makes it trustworthy.” 
+- Not a general-content MOOC platform competing on catalog breadth
+- Not a black-box AI ranking/relevance system for employers
+- Not a fully autonomous AI content pipeline — human expert reviews every course
+- Not (for MVP) horizontally-scaled infra, or a fully-realized sandbox
+- Not scoped narrowly to Batam — the mechanism must generalize
 
-**Q: How would this scale if thousands of people used it?** 
+## Slide 10 — Solution 1: Micro-Credentials (MCs)
 
-“The architecture doesn't need to change — every conversation is already an independent API call, so it scales horizontally. The real cost driver is AI API usage, which scales with real usage, not fixed infrastructure. That's the honest, given tradeoff of an AI-native product, but it means I only pay for real, active learners.” 
+- The atomic, scored unit of a course: one concept/skill
+- Depth score (0–10) + exercise/scenario history + competency summary
+- **Bottom-up, not top-down**: Coursera tells you a skill was covered; Talent
+  Bridge reports *how well*
+- Fully transparent — every score traces back to quoted evidence, no black box
 
-**Q: Why not just use an existing platform or framework instead of building this from scratch?** “Existing platforms like Udemy prove content consumption, not understanding — that's the exact gap this project exists to close, so building on top of them wouldn't solve the problem. On the technical side, I used direct API calls rather than a heavier framework because it gave me precise control over how the teaching and evaluation prompts work, without unnecessary complexity for this stage.” 
+## Slide 11 — Depth Score
 
-**Q: What happens if the AI evaluation is wrong or unfair to a learner?** 
+AI-assigned, 0–10, derived from three dimensions of a section conversation:
 
-“Right now, evaluation is evidence-based — every score is backed by a specific quote from what the learner actually said, not just a number. That's a deliberate design choice: an employer, or the learner themselves, could later review the actual evidence, not just trust a black-box score. A production version would add a human review/appeal path on top of that same evidence log.” 
+- **Speed** to real understanding
+- **Quality** of the learner's own explanation
+- **Sharpness** of the learner's follow-up questions
 
-**Q: Is this only for Batam, or could it scale beyond this hackathon?** 
+Every score carries an evidence log — quoted excerpts from the actual
+conversation, not an opaque number.
 
-“The mechanism doesn't depend on Batam specifically — the courses and skills could be swapped for any field. Batam's data-center boom is the immediate, real problem I designed the first version around, but the underlying idea — proving real understanding instead of content consumption — applies  
-anywhere there's a skills-gap-to-hiring problem.”  
-**DELIVERY NOTES** 
+*(Open question: the exact formula combining the three dimensions is not yet
+defined — see Slide 20.)*
 
-• Keep the “problem” section short and sharp — the “completion vs. understanding” line is your strongest single sentence, don't bury it 
+## Slide 12 — Competency Decay
 
-• If you get a demo slot: **show**, don't describe, a live conversation catching a real misconception — much more convincing than explaining it 
+- **−0.5 every 3 months** while unemployed, off a 0–10 scale, floors at 0
+- Refreshes upward on newer completed exercises
+- **Frozen** while employed in a role that uses the skill — no decay
+- Models real skill atrophy so an old credential doesn't read as current
 
-• Say “I reviewed and validated the content” with confidence — this is a genuine strength, not something to downplay 
+**Example:** MC at 8.0 → unemployed 3 months → 7.5 → 6 months → 7.0. A new
+exercise scoring 9.0 at month 4 refreshes the stored score upward instead of
+continuing to decay.
 
-• If a question surprises you and you don't have a clean answer, it's fine to say: “That's a great question — for this MVP, here's the honest current state...” — panels respect honesty over overselling
+## Slide 13 — Solution 2: Course Creation & Section Gating
 
+- Course is anchored to a real job description (MVP: a hand-picked sample;
+  future: live LinkedIn scrape)
+- AI designs the course against that job + the learner's current competencies
+- Sequential, gated sections (1.1, 1.2, 1.3, …) — **no skipping ahead**
+- Advancing requires a real conversation with the AI instructor: explain the
+  concept back, demonstrate genuine understanding
+- Credential issues only once **every** section is genuinely completed
+- AI drafts content; **a human domain expert reviews and validates every course**
+  before it reaches a learner
+
+## Slide 14 — Section Gating, Worked Example
+
+A learner finishes reading 1.1 ("What is a storage array?"). To unlock 1.2 they
+must:
+
+- Explain in their own words what a storage array is and why redundancy matters
+- Answer a follow-up probing question
+
+If they can only repeat memorized phrases without engaging the follow-up, the
+section stays locked and the AI flags the specific gap for another attempt.
+
+## Slide 15 — Solution 3: Sandbox Incident Simulation *(exploratory)*
+
+- Learner selects an incident modeled on a real data-center scenario (storage
+  array failure, latency spike, connectivity loss)
+- Cloud workspace via K8s, incident triggered via Terraform configuration
+- Troubleshoot to restore functionality, then run a test suite to confirm
+- **Unresolved:** which components need to be mocked, and how, to be realistic —
+  not MVP-committed work
+
+## Slide 16 — Employer Matching
+
+- Employer lists required course credentials for a role
+- System returns every candidate who **genuinely earned** them — all sections,
+  all credentials issued
+- No ranking algorithm, no black box — rule-based on verified prerequisites
+- Employer sees linked exercise history and summaries, not raw personal data
+
+**Example:** Role requires `storage-fundamentals-101` +
+`network-troubleshooting-201`. Candidate A completed both → matched. Candidate B
+completed only sections 2.1–2.2 of the second course → not matched, regardless of
+resume strength.
+
+## Slide 17 — MVP Scope Boundaries
+
+| In MVP scope | Out of scope (future) |
+|---|---|
+| Solution 1 — MCs, depth scoring, decay | Solution 3 full sandbox (K8s + Terraform) |
+| Solution 2 — gated course creation | Live LinkedIn scraping pipeline |
+| Single-server stack (FastAPI + Claude via OpenRouter + SQLite) | Horizontal scaling / distributed infra |
+| Human review of every AI-drafted course | Human appeal workflow for disputed evaluations |
+| Recruiter-facing skill tracing | Formal legal PDPA sign-off |
+
+## Slide 18 — Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Backend | Python + FastAPI | Fast to build, routes every learner message to Claude and back |
+| AI Engine | Claude, via OpenRouter | Socratic teaching, evaluation, course drafting |
+| Database | SQLite | One file, no separate server, reliable at this scale |
+| Frontend | Plain HTML/CSS/JS | No build tools, nothing to break live in a demo |
+| Hosting | Self-managed Linux, systemd | Runs permanently, auto-restarts, independent of any one machine |
+
+Direct model calls to Claude via OpenRouter, not a heavier agent framework —
+precise control over teaching/evaluation prompts without unnecessary
+complexity, and the model/provider stays a config value instead of a
+hardcoded SDK dependency.
+
+## Slide 19 — Key Decisions (Load-Bearing)
+
+- Bottom-up competency signal, not top-down completion
+- Full transparency to evidence — no black-box scores
+- Competency decay models real atrophy; frozen while employed
+- Sequential gated sections — can't skip ahead
+- Human expert reviews every AI-drafted course before publish
+- Matching is rule-based on verified prerequisites, not a ranking model
+
+## Slide 20 — Open Questions
+
+- What's the exact formula combining speed / explanation quality / question
+  sharpness into one 0–10 depth score? *(needs product/eng sign-off)*
+- Is the "no PDPA concerns" claim for recruiter-visible tracing actually correct
+  under Indonesian law? *(needs legal read before broad rollout)*
+- How do we realistically simulate data-center failures for Solution 3, and what
+  needs to be mocked?
+- What does a human-review/appeal path for disputed AI evaluations look like?
+  *(post-MVP)*
+- How will live LinkedIn job scraping work — rate limits, ToS, freshness?
+  *(post-MVP)*
+
+## Slide 21 — Closing
+
+"This isn't about replacing human trainers. It's about giving Batam's workforce a
+fast, honest way to prove they're ready for these new roles — and giving
+employers, whether in Batam or across the strait in Singapore, a reason to
+actually trust that signal."
+
+---
+
+## Appendix — Q&A Backup
+
+### A1. Isn't scoring learners a privacy concern?
+
+Fully transparent — the learner knows from sign-up that conversations are
+evaluated and that evaluation is what employers see. Nothing hidden; that
+transparency is itself part of the trust mechanism. (PDPA legal verification is
+still an open item — see Slide 20.)
+
+### A2. How would this scale to thousands of users?
+
+Architecture doesn't need to change — every conversation is already an
+independent API call, so it scales horizontally. The real cost driver is AI API
+usage, which scales with actual usage rather than fixed infrastructure.
+
+### A3. Why not build on an existing platform?
+
+Existing platforms prove content consumption, not understanding — that's exactly
+the gap this exists to close. Direct model calls to Claude via OpenRouter (not a
+heavier framework) give precise control over teaching/evaluation prompts without
+unnecessary complexity at this stage.
+
+### A4. What if the AI evaluation is wrong or unfair?
+
+Every score is backed by a quoted excerpt from what the learner actually said —
+evidence-based, not a bare number. A production version would add a human
+review/appeal path on top of the same evidence log (not built yet — see Slide 20).

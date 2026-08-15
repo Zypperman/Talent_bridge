@@ -23,7 +23,7 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       TALENTBRIDGE_DB_PATH: /data/talentbridge.db
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENROUTER_KEY: ${OPENROUTER_KEY}
     volumes:
       - ./data:/data
     depends_on:

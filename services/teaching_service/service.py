@@ -5,11 +5,12 @@ three parameters: speed, explanation quality, question sharpness.
 """
 
 import os, json
-from anthropic import Anthropic
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENROUTER_KEY"), base_url="https://openrouter.ai/api/v1")
+MODEL = "anthropic/claude-sonnet-4-6"
 
 
 TEACHING_SYSTEM_PROMPT = """You are a technical instructor for a data-center operations training platform. You are teaching ONE specific section of a course, described below. Stay strictly within the scope of this section's content — do not wander into other topics.
@@ -24,13 +25,12 @@ Keep each response focused on one idea at a time. When you believe the learner h
 
 def generate_teaching_reply(section_content, conversation):
     system_prompt = TEACHING_SYSTEM_PROMPT.format(section_content=section_content)
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
+    response = client.chat.completions.create(
+        model=MODEL,
         max_tokens=800,
-        system=system_prompt,
-        messages=conversation
+        messages=[{"role": "system", "content": system_prompt}] + conversation
     )
-    return response.content[0].text
+    return response.choices[0].message.content
 
 
 EVALUATION_PROMPT = """Below is a full conversation transcript between a learner and an AI instructor covering one training section. Evaluate the learner's performance across exactly three parameters.
@@ -64,13 +64,13 @@ def evaluate_section(section_content, conversation):
         transcript += f"{msg['role'].upper()}: {msg['content']}\n\n"
 
     prompt = EVALUATION_PROMPT.format(section_content=section_content, transcript=transcript)
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
+    response = client.chat.completions.create(
+        model=MODEL,
         max_tokens=500,
         messages=[{"role": "user", "content": prompt}]
     )
 
-    raw = response.content[0].text.strip()
+    raw = response.choices[0].message.content.strip()
     if raw.startswith("```"):
         lines = raw.split("\n")
         raw = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
