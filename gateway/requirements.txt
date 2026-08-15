@@ -1,4 +1,7 @@
 fastapi
 uvicorn[standard]
 pydantic
-redis
+bcrypt
+openai
+python-dotenv
+libsql
